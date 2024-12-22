@@ -1032,7 +1032,7 @@ const ccTldList = [
   'mobile.nr',
   'tel.nr',
   'tlf.nr',
-  'e164.arpa',
-];
+  'e164.arpa'
+]
 
-export default ccTldList;
+export default ccTldList

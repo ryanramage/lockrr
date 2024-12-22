@@ -3,12 +3,15 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "standard",
+    "fix": "standard --fix"
   },
-  "author": "",
+  "author": "Ryan Ramage",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "autopass": "^1.0.2",
+    "bare-env": "^3.0.0",
     "bare-fs": "^4.0.1",
     "bare-process": "^4.0.0",
     "bare-readline": "^1.0.6",
@@ -16,9 +19,14 @@
     "bare-subprocess": "^5.0.2",
     "bare-tty": "github:holepunchto/bare-tty",
     "base-emoji": "^2.0.1",
+    "corestore": "^6.18.4",
     "hypercore-crypto": "^3.4.2",
+    "paparam": "^1.6.2",
     "sodium-universal": "^4.0.1",
     "streamx": "^2.21.1",
     "supergenpass-lib": "^3.0.1"
+  },
+  "devDependencies": {
+    "standard": "^17.1.2"
   }
 }
