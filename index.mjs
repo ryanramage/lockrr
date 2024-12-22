@@ -79,7 +79,7 @@ async function handleOptionsMode (lockrr) {
   const currentOptions = await autopass.get(`options|${domain}`) || '{}'
   const opts = JSON.parse(currentOptions)
   // set any of the option mode flags
-  if (lockrr.flags.length) opts.length = lockrr.flags.length
+  if (lockrr.flags.length) opts.length = Number(lockrr.flags.length)
   if (lockrr.flags.secret) opts.secret = lockrr.flags.secret
   if (lockrr.flags.suffix) opts.suffix = lockrr.flags.suffix
 
@@ -89,6 +89,8 @@ async function handleOptionsMode (lockrr) {
   await autopass.add(`options|${domain}`, JSON.stringify(opts))
 
   await autopass.close()
+  console.log('✅ options set')
+  console.log(opts)
   process.exit(0)
 }
 
@@ -137,7 +139,31 @@ async function handleStoreMode (lockrr) {
   process.exit(0)
 }
 
-function handleRetrieveMode (autopass, domain, password) {
+async function handleRetrieveMode (autopass, domain, password) {
+  const entries = await getDomainEntries(autopass, domain, password)
+  const currentOptions = await autopass.get(`options|${domain}`) || '{}'
+  const opts = JSON.parse(currentOptions)
+  const hash = await sgp(password, domain, opts)
+  const final = opts.suffix ? hash + opts.suffix : hash
+  console.log('Domain:', domain)
+
+  if (entries.length) {
+    console.log('----------- store -----------')
+    entries.forEach(entry => {
+      if (entry.error) return console.log(entry.key, ': 🚨 error decrypting!')
+      console.log(entry.key, ':', entry.value)
+    })
+    console.log('-----------------------------')
+  }
+  if (Object.keys(opts).length) {
+    console.log('')
+    console.log(opts)
+  }
+  await toClipboard(final)
+  console.log('✅ password copied to clipboard 📝\n')
+}
+
+function getDomainEntries (autopass, domain, password) {
   return new Promise((resolve, reject) => {
     const entries = []
     const query = {
@@ -145,11 +171,10 @@ function handleRetrieveMode (autopass, domain, password) {
       lt: `domain|${domain}|~`
     }
 
-    // Create the stream
     const readstream = autopass.list(query)
-
+    readstream.on('error', reject)
     readstream.on('data', (data) => {
-      const [, key] = data.key.split('|')
+      const [, , key] = data.key.split('|')
       try {
         const decrypted = decryptEntry(password, data.value)
         entries.push({ key, value: decrypted })
@@ -157,32 +182,7 @@ function handleRetrieveMode (autopass, domain, password) {
         entries.push({ key, error: err })
       }
     })
-
-    readstream.on('error', reject)
-
-    readstream.on('end', () => {
-      autopass.get(`options|${domain}`).then(currentOptions => {
-        if (!currentOptions) currentOptions = '{}'
-        const opts = JSON.parse(currentOptions)
-        sgp(password, domain, opts)
-          .then(hash => toClipboard(hash))
-          .then(() => {
-            console.log('Domain:', domain)
-
-            if (entries.length) {
-              console.log('----------- store -----------')
-              entries.forEach(entry => {
-                if (entry.error) return console.log(entry.key, ': 🚨 error decrypting!')
-                console.log(entry.key, ':', entry.value)
-              })
-              console.log('-----------------------------')
-            }
-
-            console.log('✅ password copied to clipboard 📝\n')
-            resolve()
-          }).catch(reject)
-      })
-    })
+    readstream.on('end', () => resolve(entries))
   })
 }
 
