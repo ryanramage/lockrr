@@ -253,6 +253,7 @@ function emoji (password) {
     parts.push(pic)
   }
   console.log('visual: ' + parts.join('  '))
+  console.log('')
 }
 
 function getPassword () {
