@@ -109,7 +109,8 @@ async function handleRetrieveMode(autopass, domain, password) {
   })
 
   readstream.on('end', async () => {
-    await run(password, domain)
+    const hash = await sgp(password, domain, { })
+    await toClipboard(hash)
     console.log('Domain:', domain)
 
     if (entries.length) {
@@ -173,11 +174,6 @@ function getBaseDir (profile) {
   if (!profile) profile = 'default'
   const baseDir = `${homeDir}/.lockrr/${profile}/`
   return baseDir
-}
-
-async function run (password, domain) {
-  const hash = await sgp(password, domain, { })
-  await toClipboard(hash)
 }
 
 function sgp (password, url, opts) {
