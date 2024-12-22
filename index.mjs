@@ -74,7 +74,17 @@ async function handlePasswordMode (lockrr) {
 }
 
 async function repeatMode (autopass, password) {
-  const url = '' // TODO
+  process.stderr.write('Enter URL: ')
+  const url = await new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    })
+    rl.on('line', (line) => {
+      rl.close()
+      resolve(line)
+    })
+  })
   const domain = hostname(url, {})
   await handleRetrieveMode(autopass, domain, password)
   repeatMode(autopass, password)
