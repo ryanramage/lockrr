@@ -64,10 +64,19 @@ async function handleAcceptMode (invite, profile) {
 async function handlePasswordMode (lockrr) {
   const autopass = await getAutopass(lockrr.flags.profile)
   const password = await getPassword()
-  const domain = hostname(lockrr.args.url, {})
   console.log('')
   emoji(password)
+  if (!lockrr.args.url) {
+    const domain = hostname(lockrr.args.url, {})
+    await handleRetrieveMode(autopass, domain, password)
+  }
+  repeatMode(autopass, password)
+}
+
+async function repeatMode (autopass, password) {
+  const domain = '' // TODO
   await handleRetrieveMode(autopass, domain, password)
+  repeatMode(autopass, password)
 }
 
 async function handleStoreMode (lockrr) {
@@ -95,7 +104,7 @@ function handleRetrieveMode (autopass, domain, password) {
 
     // Create the stream
     const readstream = autopass.list(query)
-    
+
     readstream.on('data', (data) => {
       const [, key] = data.key.split('|')
       try {
