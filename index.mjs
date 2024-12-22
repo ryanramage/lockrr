@@ -9,6 +9,7 @@ import { spawn } from 'bare-subprocess'
 import tty from 'bare-tty'
 import baseEmoji from 'base-emoji'
 import crypto from 'hypercore-crypto'
+import sodium from 'sodium-universal'
 import { Writable } from 'streamx'
 import generate from './sgp/generate.mjs'
 import hostname from './sgp/hostname'
@@ -34,10 +35,14 @@ const lockrr = command(
     const domain = hostname(lockrr.args.url, {})
     const autopass = await getAutopass(lockrr.flags.profile)
 
+    const password = await getPassword()
+    console.log('')
+    emoji(password)
     if (lockrr.flags.store) {
       const { key, value } = lockrr.args
       console.log(`Storing value '${value}' with domain ${domain} and key '${key}'`)
-      await autopass.add(`${domain}|${key}`, value)
+      const encrypted = encryptEntry(password, value)
+      await autopass.add(`${domain}|${key}`, encrypted)
       await autopass.close()
       process.exit(0)
     }
@@ -50,17 +55,26 @@ const lockrr = command(
     const readstream = await autopass.list(query)
     readstream.on('data', (data) => {
       const [, key] = data.key.split('|')
-      const entry = { key, value: data.value }
-      entries.push(entry)
+      try {
+        const decrypted = decryptEntry(password, data.value)
+        const entry = { key, value: decrypted }
+        entries.push(entry)
+      } catch (err) {
+        const entry = { key, error: err }
+        entries.push(entry)
+      }
     })
     readstream.on('end', async () => {
-      await run(domain)
+      await run(password, domain)
 
       console.log('Domain:', domain)
 
       if (entries.length) {
         console.log('----------- store -----------')
-        entries.forEach(entry => console.log(entry.key, ':', entry.value))
+        entries.forEach(entry => {
+          if (entry.error) return console.log(entry.key, ': error decrypting')
+          console.log(entry.key, ':', entry.value)
+        })
         console.log('-----------------------------')
       }
 
@@ -73,6 +87,40 @@ const lockrr = command(
 
 lockrr.parse(process.argv.slice(2))
 
+function encryptEntry (password, value) {
+  const passwordBuffer = Buffer.from(password)
+  const valueBuffer = Buffer.from(value)
+
+  // Derive a key directly from the password
+  const key = Buffer.alloc(sodium.crypto_secretbox_KEYBYTES)
+  sodium.crypto_generichash(key, passwordBuffer) // Using generic hash as a simple key derivation
+
+  // Encrypt the value
+  const cipher = Buffer.alloc(valueBuffer.length + sodium.crypto_secretbox_MACBYTES)
+  sodium.crypto_secretbox_easy(cipher, valueBuffer, Buffer.alloc(sodium.crypto_secretbox_NONCEBYTES), key)
+
+  return cipher.toString('base64') // Return the ciphertext as a base64 string
+}
+
+function decryptEntry (password, ciphertext) {
+  const passwordBuffer = Buffer.from(password)
+  const cipherBuffer = Buffer.from(ciphertext, 'base64')
+
+  // Derive the key directly from the password
+  const key = Buffer.alloc(sodium.crypto_secretbox_KEYBYTES)
+  sodium.crypto_generichash(key, passwordBuffer)
+
+  // Decrypt the value
+  const plainText = Buffer.alloc(cipherBuffer.length - sodium.crypto_secretbox_MACBYTES)
+  const success = sodium.crypto_secretbox_open_easy(plainText, cipherBuffer, Buffer.alloc(sodium.crypto_secretbox_NONCEBYTES), key)
+
+  if (!success) {
+    throw new Error('Decryption failed. Invalid password or corrupted data.')
+  }
+
+  return plainText.toString() // Return the decrypted value as a string
+}
+
 async function getAutopass (profile) {
   if (!profile) profile = 'default'
   const baseDir = `${homeDir}/.lockrr/${profile}/`
@@ -81,10 +129,7 @@ async function getAutopass (profile) {
   return autopass
 }
 
-async function run (domain) {
-  const password = await getPassword()
-  console.log('')
-  emoji(password)
+async function run (password, domain) {
   const hash = await sgp(password, domain, { })
   await toClipboard(hash)
 }
