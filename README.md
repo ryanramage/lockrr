@@ -20,6 +20,7 @@ A secure CLI password(less) manager that puts your security first.
 npm i bare-runtime -g
 git clone https://github.com/ryanramage/lockrr
 cd lockrr
+npm i
 ```
 
 ## Usage Guide
