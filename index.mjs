@@ -23,6 +23,7 @@ const lockrr = command(
   description('A supergenpass compatible password generator with associated p2p storage.'),
   flag('--invite', 'lockrr sharing invite'),
   flag('--accept [invite]', 'accept a lockrr invite'),
+  flag('--sync', 'run in backgroud to keep syncing'),
   flag('--store', 'enable store mode, to put a key/value in the lockrr'),
   flag('--profile [profile]', 'isolated profile like "work", "school"'),
   arg('<url>', 'the domain/url to store or retrieve secrets for'),
@@ -33,11 +34,14 @@ const lockrr = command(
       await handleInviteMode(lockrr.flags.profile)
     } else if (lockrr.flags.accept) {
       await handleAcceptMode(lockrr.flags.accept, lockrr.flags.profile)
+    } else if (lockrr.flags.sync) {
+      await handleSyncMode(lockrr.flags.profile)
     } else {
       await handlePasswordMode(lockrr)
     }
   }
 )
+lockrr.parse(process.argv.slice(2)) // this starts everything
 
 async function handleInviteMode(profile) {
   const autopass = await getAutopass(profile)
@@ -56,6 +60,11 @@ async function handleAcceptMode(invite, profile) {
   const autopass = await pair.finished()
   await autopass.ready()
   console.log('✅ invite accepted')
+}
+
+async function handleSyncMode(profile) {
+  const autopass = await getAutopass(profile)
+  console.log('sync mode 🔄\n')
 }
 
 async function handlePasswordMode(lockrr) {
@@ -94,7 +103,7 @@ async function handleRetrieveMode(autopass, domain, password) {
     gt: `${domain}|`,
     lt: `${domain}|~`
   }
-  
+
   const readstream = await autopass.list(query)
   readstream.on('data', (data) => {
     const [, key] = data.key.split('|')
@@ -126,8 +135,8 @@ async function handleRetrieveMode(autopass, domain, password) {
     await autopass.close()
     process.exit()
   })
+}
 
-lockrr.parse(process.argv.slice(2))
 
 function encryptEntry (password, value) {
   const passwordBuffer = Buffer.from(password)
