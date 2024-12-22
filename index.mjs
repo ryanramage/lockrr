@@ -94,43 +94,41 @@ function handleRetrieveMode (autopass, domain, password) {
     }
 
     // Create the stream
-    autopass.list(query)
-      .then(readstream => {
-        readstream.on('data', (data) => {
-          const [, key] = data.key.split('|')
-          try {
-            const decrypted = decryptEntry(password, data.value)
-            entries.push({ key, value: decrypted })
-          } catch (err) {
-            entries.push({ key, error: err })
-          }
-        })
+    const readstream = autopass.list(query)
+    
+    readstream.on('data', (data) => {
+      const [, key] = data.key.split('|')
+      try {
+        const decrypted = decryptEntry(password, data.value)
+        entries.push({ key, value: decrypted })
+      } catch (err) {
+        entries.push({ key, error: err })
+      }
+    })
 
-        readstream.on('error', reject)
+    readstream.on('error', reject)
 
-        readstream.on('end', () => {
-          // Handle all async operations after stream ends
-          sgp(password, domain, {})
-            .then(hash => toClipboard(hash))
-            .then(() => {
-              console.log('Domain:', domain)
+    readstream.on('end', () => {
+      // Handle all async operations after stream ends
+      sgp(password, domain, {})
+        .then(hash => toClipboard(hash))
+        .then(() => {
+          console.log('Domain:', domain)
 
-              if (entries.length) {
-                console.log('----------- store -----------')
-                entries.forEach(entry => {
-                  if (entry.error) return console.log(entry.key, ': 🚨 error decrypting!')
-                  console.log(entry.key, ':', entry.value)
-                })
-                console.log('-----------------------------')
-              }
-
-              console.log('✅ password copied to clipboard 📝\n')
-              resolve()
+          if (entries.length) {
+            console.log('----------- store -----------')
+            entries.forEach(entry => {
+              if (entry.error) return console.log(entry.key, ': 🚨 error decrypting!')
+              console.log(entry.key, ':', entry.value)
             })
-            .catch(reject)
+            console.log('-----------------------------')
+          }
+
+          console.log('✅ password copied to clipboard 📝\n')
+          resolve()
         })
-      })
-      .catch(reject)
+        .catch(reject)
+    })
   })
 }
 
