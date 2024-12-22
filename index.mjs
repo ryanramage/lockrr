@@ -15,6 +15,7 @@ import generate from './sgp/generate.mjs'
 import hostname from './sgp/hostname'
 
 const homeDir = env.HOME || env.USERPROFILE // USERPROFILE for Windows compatibility
+const stdin = new tty.ReadStream(0)
 
 // Define the main 'lockrr' command
 const lockrr = command(
@@ -110,7 +111,7 @@ async function repeatMode (autopass, password) {
   console.log('Enter URL: ')
   const url = await new Promise((resolve) => {
     const rl = readline.createInterface({
-      input: process.stdin,
+      input: stdin,
       output: process.stdout
     })
     rl.on('line', (line) => {
@@ -273,7 +274,6 @@ function getPassword (prompt) {
     if (!prompt) prompt = 'Master password: '
     process.stderr.write(prompt)
     // console.log('Enter Password:')
-    const stdin = new tty.ReadStream(0)
     stdin.setRawMode(true)
     const mask = (_data, cb) => cb(null, '*')
     const rl = readline.createInterface({
