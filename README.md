@@ -50,7 +50,7 @@ google.com
 Domain: google.com
 ----------- store -----------
 note : you probably wanted google.ca
-username : ryanr@redmantech.com
+username : ryanr@personal-email.com
 -----------------------------
 
 { length: 15, suffix: '_121' }
