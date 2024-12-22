@@ -1,34 +1,85 @@
+import process from 'bare-process'
 import readline from 'bare-readline'
+import { spawn } from 'bare-subprocess'
 import tty from 'bare-tty'
-import { Writable } from 'stream'
+import baseEmoji from 'base-emoji'
+import crypto from 'hypercore-crypto'
+import { Writable } from 'streamx'
+import generate from './sgp/generate.mjs'
+run()
 
-const stdio_in = tty.WriteStream(0)
 
-// Save current stdin settings
-const { isRaw } = stdio_in
-stdio_in.setRawMode(true)
-
-const mask = (data, cb) => {
-  cb(null)
+async function run () {
+  const password = await getPassword()
+  emoji(password)
+  const hash = await sgp(password, 'https://google.com', {  })
+  await toClipboard(hash)
+  process.exit()
 }
 
-const rl = readline.createInterface({
-  input: stdio_in,
-  output: new Writable({ write: mask })
-})
 
-console.log('Enter Password:')
+function sgp (password, url, opts) {
+  return new Promise((resolve, reject) => {
+    generate(password, url, opts, (err, result) => {
+      if (err) return reject(err)
+      resolve(result)
+    })
+  })
+}
 
-rl.question('', (password) => {
-  // Restore stdin settings
-  stdio_in.setRawMode(isRaw)
-  
-  // Close the readline interface
-  rl.close()
-  
-  // Output the password
-  console.log('\nPassword received:', password)
-  
-  // Exit the program
-  process.exit(0)
-})
+
+function emoji (password) {
+  // print out 5 emoji from a md5 hash
+  var buf = Buffer.from(password, 'utf8')
+  var bits = crypto.hash(buf)
+  var parts = []
+  for (var i = 0; i < 5; i++) {
+    var bit = bits.slice(i, i + 1)
+    var pic = baseEmoji.toUnicode(Buffer.from(bit, 'utf8'))
+    parts.push(pic)
+  }
+  console.log('password check: ' + parts.join('  '))
+}
+
+function getPassword () {
+  return new Promise((resolve) => {
+    console.log('Enter Password:')
+    const stdin = new tty.ReadStream(0)
+    stdin.setRawMode(true)
+    const mask = (_data, cb) => cb(null, '*')
+    const rl = readline.createInterface({
+      input: stdin,
+      output: new Writable({ write: mask })
+    })
+    rl.on('data', (line) => {
+      stdin.setRawMode(false)
+      rl.close()
+      resolve(line)
+    })
+  })
+}
+
+function toClipboard(text) {
+  return new Promise((resolve, reject) => {
+    var proc = spawn(clipboard(), {
+      stdio: ["pipe", "ignore", "ignore"]
+    });
+    proc.on("error", reject);
+    proc.on("exit", () => resolve())
+    proc.stdin.write(text)
+    proc.stdin.end()
+  })
+}
+
+function clipboard () {
+  switch (process.platform) {
+    case 'darwin':
+      return 'pbcopy';
+    case 'win32':
+      return 'clip';
+    case 'linux':
+      return 'xclip -selection clipboard';
+    case 'android':
+      return 'termux-clipboard-set'
+  }
+}
