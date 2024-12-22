@@ -66,7 +66,7 @@ async function handlePasswordMode (lockrr) {
   const password = await getPassword()
   console.log('')
   emoji(password)
-  if (!lockrr.args.url) {
+  if (lockrr.args.url) {
     const domain = hostname(lockrr.args.url, {})
     await handleRetrieveMode(autopass, domain, password)
   }
@@ -74,7 +74,7 @@ async function handlePasswordMode (lockrr) {
 }
 
 async function repeatMode (autopass, password) {
-  process.stderr.write('Enter URL: ')
+  console.log('Enter URL: ')
   const url = await new Promise((resolve) => {
     const rl = readline.createInterface({
       input: process.stdin,
