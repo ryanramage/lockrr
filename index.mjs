@@ -84,7 +84,7 @@ async function handleOptionsMode (lockrr) {
   if (lockrr.flags.secret) opts.secret = lockrr.flags.secret
   if (lockrr.flags.suffix) opts.suffix = lockrr.flags.suffix
 
-  if (lockrr.flags.removeSubdomains) opts.removeSubdomains = lockrr.flags.removeSubdomains === 'true' ? true : false
+  if (lockrr.flags.removeSubdomains) opts.removeSubdomains = lockrr.flags.removeSubdomains === 'true'
 
   await autopass.add(`options|${domain}`, JSON.stringify(opts))
 
@@ -163,7 +163,6 @@ async function handleRetrieveMode (autopass, domain, password) {
         final = entry.value
         const redacted = entry.value.replace(/./g, '*')
         console.log(entry.key, ':', redacted)
-
       } else console.log(entry.key, ':', entry.value)
     })
     console.log('-----------------------------')
