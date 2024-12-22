@@ -23,7 +23,6 @@ const lockrr = command(
   description('A supergenpass compatible password generator with associated p2p storage.'),
   flag('--invite', 'lockrr sharing invite'),
   flag('--accept [invite]', 'accept a lockrr invite'),
-  flag('--sync', 'run in backgroud to keep syncing'),
   flag('--store', 'enable store mode, to put a key/value in the lockrr'),
   flag('--profile [profile]', 'isolated profile like "work", "school"'),
   arg('<url>', 'the domain/url to store or retrieve secrets for'),
@@ -34,8 +33,8 @@ const lockrr = command(
       await handleInviteMode(lockrr.flags.profile)
     } else if (lockrr.flags.accept) {
       await handleAcceptMode(lockrr.flags.accept, lockrr.flags.profile)
-    } else if (lockrr.flags.sync) {
-      await handleSyncMode(lockrr.flags.profile)
+    } else if (lockrr.flags.store) {
+      await handleStoreMode(lockrr)
     } else {
       await handlePasswordMode(lockrr)
     }
@@ -43,14 +42,14 @@ const lockrr = command(
 )
 lockrr.parse(process.argv.slice(2)) // this starts everything
 
-async function handleInviteMode(profile) {
+async function handleInviteMode (profile) {
   const autopass = await getAutopass(profile)
   const inv = await autopass.createInvite()
   await toClipboard(inv)
   console.log('✅ invite copied to clipboard 📝\n')
 }
 
-async function handleAcceptMode(invite, profile) {
+async function handleAcceptMode (invite, profile) {
   if (invite.length !== 106) {
     console.log('⚠️ invalid invite')
     process.exit(1)
@@ -62,34 +61,23 @@ async function handleAcceptMode(invite, profile) {
   console.log('✅ invite accepted')
 }
 
-async function handleSyncMode(profile) {
-  const autopass = await getAutopass(profile)
-  console.log('sync mode 🔄\n')
+async function handlePasswordMode (lockrr) {
+  const autopass = await getAutopass(lockrr.flags.profile)
+  const password = await getPassword()
+  const domain = hostname(lockrr.args.url, {})
+  console.log('')
+  emoji(password)
+  await handleRetrieveMode(autopass, domain, password)
 }
 
-async function handlePasswordMode(lockrr) {
-  if (!lockrr.args.url) {
-    console.log('url is required')
-    console.log('add -h for help')
-    process.exit(1)
-  }
-
+async function handleStoreMode (lockrr) {
   const autopass = await getAutopass(lockrr.flags.profile)
   const domain = hostname(lockrr.args.url, {})
   const password = await getPassword()
   console.log('')
   emoji(password)
 
-  if (lockrr.flags.store) {
-    await handleStoreMode(autopass, domain, password, lockrr.args)
-    return
-  }
-
-  await handleRetrieveMode(autopass, domain, password)
-}
-
-async function handleStoreMode(autopass, domain, password, args) {
-  const { key, value } = args
+  const { key, value } = lockrr.args
   console.log(`Storing value '${value}' with domain ${domain} and key '${key}'`)
   const encrypted = encryptEntry(password, value)
   await autopass.add(`${domain}|${key}`, encrypted)
@@ -97,46 +85,46 @@ async function handleStoreMode(autopass, domain, password, args) {
   process.exit(0)
 }
 
-async function handleRetrieveMode(autopass, domain, password) {
-  const entries = []
-  const query = {
-    gt: `${domain}|`,
-    lt: `${domain}|~`
-  }
-
-  const readstream = await autopass.list(query)
-  readstream.on('data', (data) => {
-    const [, key] = data.key.split('|')
-    try {
-      const decrypted = decryptEntry(password, data.value)
-      const entry = { key, value: decrypted }
-      entries.push(entry)
-    } catch (err) {
-      const entry = { key, error: err }
-      entries.push(entry)
-    }
-  })
-
-  readstream.on('end', async () => {
-    const hash = await sgp(password, domain, { })
-    await toClipboard(hash)
-    console.log('Domain:', domain)
-
-    if (entries.length) {
-      console.log('----------- store -----------')
-      entries.forEach(entry => {
-        if (entry.error) return console.log(entry.key, ': 🚨 error decrypting!')
-        console.log(entry.key, ':', entry.value)
-      })
-      console.log('-----------------------------')
+async function handleRetrieveMode (autopass, domain, password) {
+  return new Promise(async (resolve) => {
+    const entries = []
+    const query = {
+      gt: `${domain}|`,
+      lt: `${domain}|~`
     }
 
-    console.log('✅ password copied to clipboard 📝\n')
-    await autopass.close()
-    process.exit()
+    const readstream = await autopass.list(query)
+    readstream.on('data', (data) => {
+      const [, key] = data.key.split('|')
+      try {
+        const decrypted = decryptEntry(password, data.value)
+        const entry = { key, value: decrypted }
+        entries.push(entry)
+      } catch (err) {
+        const entry = { key, error: err }
+        entries.push(entry)
+      }
+    })
+
+    readstream.on('end', async () => {
+      const hash = await sgp(password, domain, { })
+      await toClipboard(hash)
+      console.log('Domain:', domain)
+
+      if (entries.length) {
+        console.log('----------- store -----------')
+        entries.forEach(entry => {
+          if (entry.error) return console.log(entry.key, ': 🚨 error decrypting!')
+          console.log(entry.key, ':', entry.value)
+        })
+        console.log('-----------------------------')
+      }
+
+      console.log('✅ password copied to clipboard 📝\n')
+      resolve()
+    })
   })
 }
-
 
 function encryptEntry (password, value) {
   const passwordBuffer = Buffer.from(password)
