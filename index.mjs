@@ -21,12 +21,16 @@ const lockrr = command(
   'lockrr',
   summary('lockrr command-line tool'),
   description('A command-line tool to manage secrets in a lockrr.'),
-  flag('--store', 'store a value in the lockrr'),
-  flag('--profile [profile]', 'specify a isolated profile to use'),
-  arg('<url>', 'the url'),
-  arg('<key>', 'the key to store, like username'),
-  arg('<value', 'the value of the key, like bob'),
+  flag('--store', 'enable store mode, to put a key/value in the lockrr'),
+  flag('--profile [profile]', 'isolated profile like "work", "school"'),
+  arg('<url>', 'the domain/url to store or retrieve secrets for'),
+  arg('<key>', 'when in store mode, a key to store like "email"'),
+  arg('<value>', 'when in store mode, the value for the key, like "bob@gmail.com"'),
   async () => {
+    if (!lockrr.args.url) {
+      console.log('url is required')
+      process.exit(1)
+    }
     const domain = hostname(lockrr.args.url, {})
     const autopass = await getAutopass(lockrr.flags.profile)
 
