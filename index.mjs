@@ -30,79 +30,101 @@ const lockrr = command(
   arg('<value>', 'when in store mode, the value for the key, like "bob@gmail.com"'),
   async () => {
     if (lockrr.flags.invite) {
-      const autopass = await getAutopass(lockrr.flags.profile)
-      const inv = await autopass.createInvite()
-      await toClipboard(inv)
-      console.log('✅ invite copied to clipboard 📝\n')
+      await handleInviteMode(lockrr.flags.profile)
     } else if (lockrr.flags.accept) {
-      const invite = lockrr.flags.accept
-      if (invite.length !== 106) {
-        console.log('⚠️ invalid invite')
-        process.exit(1)
-      }
-      const baseDir = getBaseDir(lockrr.flags.profile)
-      const pair = Autopass.pair(new Corestore(baseDir), invite)
-      const autopass = await pair.finished()
-      await autopass.ready()
-      console.log('✅ invite accepted')
+      await handleAcceptMode(lockrr.flags.accept, lockrr.flags.profile)
     } else {
-      if (!lockrr.args.url) {
-        console.log('url is required')
-        console.log('add -h for help')
-        process.exit(1)
-      }
-      const autopass = await getAutopass(lockrr.flags.profile)
-      const domain = hostname(lockrr.args.url, {})
-
-      const password = await getPassword()
-      console.log('')
-      emoji(password)
-      if (lockrr.flags.store) {
-        const { key, value } = lockrr.args
-        console.log(`Storing value '${value}' with domain ${domain} and key '${key}'`)
-        const encrypted = encryptEntry(password, value)
-        await autopass.add(`${domain}|${key}`, encrypted)
-        await autopass.close()
-        process.exit(0)
-      }
-
-      const entries = []
-      const query = {
-        gt: `${domain}|`,
-        lt: `${domain}|~`
-      }
-      const readstream = await autopass.list(query)
-      readstream.on('data', (data) => {
-        const [, key] = data.key.split('|')
-        try {
-          const decrypted = decryptEntry(password, data.value)
-          const entry = { key, value: decrypted }
-          entries.push(entry)
-        } catch (err) {
-          const entry = { key, error: err }
-          entries.push(entry)
-        }
-      })
-      readstream.on('end', async () => {
-        await run(password, domain)
-
-        console.log('Domain:', domain)
-
-        if (entries.length) {
-          console.log('----------- store -----------')
-          entries.forEach(entry => {
-            if (entry.error) return console.log(entry.key, ': 🚨 error decrypting!')
-            console.log(entry.key, ':', entry.value)
-          })
-          console.log('-----------------------------')
-        }
-
-        console.log('✅ password copied to clipboard 📝\n')
-        await autopass.close()
-        process.exit()
-      })
+      await handlePasswordMode(lockrr)
     }
   }
+)
+
+async function handleInviteMode(profile) {
+  const autopass = await getAutopass(profile)
+  const inv = await autopass.createInvite()
+  await toClipboard(inv)
+  console.log('✅ invite copied to clipboard 📝\n')
+}
+
+async function handleAcceptMode(invite, profile) {
+  if (invite.length !== 106) {
+    console.log('⚠️ invalid invite')
+    process.exit(1)
+  }
+  const baseDir = getBaseDir(profile)
+  const pair = Autopass.pair(new Corestore(baseDir), invite)
+  const autopass = await pair.finished()
+  await autopass.ready()
+  console.log('✅ invite accepted')
+}
+
+async function handlePasswordMode(lockrr) {
+  if (!lockrr.args.url) {
+    console.log('url is required')
+    console.log('add -h for help')
+    process.exit(1)
+  }
+
+  const autopass = await getAutopass(lockrr.flags.profile)
+  const domain = hostname(lockrr.args.url, {})
+  const password = await getPassword()
+  console.log('')
+  emoji(password)
+
+  if (lockrr.flags.store) {
+    await handleStoreMode(autopass, domain, password, lockrr.args)
+    return
+  }
+
+  await handleRetrieveMode(autopass, domain, password)
+}
+
+async function handleStoreMode(autopass, domain, password, args) {
+  const { key, value } = args
+  console.log(`Storing value '${value}' with domain ${domain} and key '${key}'`)
+  const encrypted = encryptEntry(password, value)
+  await autopass.add(`${domain}|${key}`, encrypted)
+  await autopass.close()
+  process.exit(0)
+}
+
+async function handleRetrieveMode(autopass, domain, password) {
+  const entries = []
+  const query = {
+    gt: `${domain}|`,
+    lt: `${domain}|~`
+  }
+  
+  const readstream = await autopass.list(query)
+  readstream.on('data', (data) => {
+    const [, key] = data.key.split('|')
+    try {
+      const decrypted = decryptEntry(password, data.value)
+      const entry = { key, value: decrypted }
+      entries.push(entry)
+    } catch (err) {
+      const entry = { key, error: err }
+      entries.push(entry)
+    }
+  })
+
+  readstream.on('end', async () => {
+    await run(password, domain)
+    console.log('Domain:', domain)
+
+    if (entries.length) {
+      console.log('----------- store -----------')
+      entries.forEach(entry => {
+        if (entry.error) return console.log(entry.key, ': 🚨 error decrypting!')
+        console.log(entry.key, ':', entry.value)
+      })
+      console.log('-----------------------------')
+    }
+
+    console.log('✅ password copied to clipboard 📝\n')
+    await autopass.close()
+    process.exit()
+  })
 )
 
 lockrr.parse(process.argv.slice(2))
