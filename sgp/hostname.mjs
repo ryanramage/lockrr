@@ -34,9 +34,11 @@ function getHostname (url, userOptions = {}) {
     removeSubdomains: true
   }
   const options = Object.assign({}, defaults, userOptions)
+  // Remove query string if present
+  const urlWithoutQuery = url.split('?')[0]
   const domainRegExp = /^(?:[a-z]+:\/\/)?(?:[^/@]+@)?([^/:]+)/i
   const ipAddressRegExp = /^\d{1,3}\.\d{1,3}.\d{1,3}\.\d{1,3}$/
-  const domainMatch = url.match(domainRegExp)
+  const domainMatch = urlWithoutQuery.match(domainRegExp)
 
   if (domainMatch === null) {
     throw new Error(`URL is invalid: ${url}`)
