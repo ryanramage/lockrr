@@ -1,39 +1,44 @@
-lockrr (🔒𝕣𝕣)
-=============
+# 🔒𝕣𝕣 lockrr
 
-**lockrr**, pronounced lock-er, is a cli personal password(less) manager.
+A secure CLI password(less) manager that puts your security first.
 
-Why is is password(less)? Because not storing a password is the safest security possible.
-How? You keep one strong master password in your head, and for each url/domain, lockrr generates a unique password to use.
-But what does this tool store? Things adjacent to your password, like usernames, hints, etc.
-If you want you can actually store an encrypted site password, but most times you wont need to.
+## Why lockrr?
 
-Setup
------
+- **Truly Password(less)**: The safest password is one that's never stored
+- **Single Master Password**: Keep one strong password in your head
+- **Unique Generation**: Creates distinct passwords for each domain
+- **Flexible Storage**: Securely store auxiliary information like usernames and notes
+- **Optional Encryption**: Can encrypt and store actual passwords if needed
 
-Currently the [bare](https://docs.pears.com/bare-reference/overview) runtime is used and needs to be installed.
-To install lockrr, do the following
+## Quick Start
 
-    npm i bare-runtime -g
-    git clone https://github.com/ryanramage/lockrr
-    cd lockrr
+### Prerequisites
+- Install the [bare runtime](https://docs.pears.com/bare-reference/overview)
 
-Running
--------
-
+### Installation
+```bash
+npm i bare-runtime -g
+git clone https://github.com/ryanramage/lockrr
+cd lockrr
 ```
-    bare index.mjs
+
+## Usage Guide
+
+### Interactive Mode
+
+Start the interactive mode with:
 ```
-This will start interactive mode. You'll be 
+bare index.mjs
+```
 
-  - prompted to enter your Master password (the one and only one you'll remember)
-  - shown some emoji that will only be the same if you enter the same password. Helps you if you messed up the password see something is wrong.
-  - be asked to enter a url/domain to work with
-  - shown your adjacent information about that domain, like notes, username, you can make your own list.
-  - shown any options that you've set for the password on that domain
-  - given your password as it will be copied to the clipboard
-  - you can keep entering urls all day. leave it open.
+#### What to Expect:
+1. Enter your master password
+2. View emoji verification (unique to your password)
+3. Enter domain/URL
+4. View stored information
+5. Get generated password (auto-copied to clipboard)
 
+Example session:
 ```
 ❯ bare index.mjs
 Master password:
@@ -52,8 +57,9 @@ username : ryanr@redmantech.com
 ✅ password copied to clipboard 📝
 ```
 
-To store adjacent information to your password, use the store mode as follows:
+### Storing Information
 
+#### Store Username
 ```
 ❯ bare index.mjs test.com --store username ryanr
 Master password:
@@ -62,8 +68,7 @@ visual: 💢  🎁  🚀  💀  👼
 Storing value 'ryanr' with domain test.com and key 'username'
 ```
 
-If you want to store an explicit password for a url/domain you can like so:
-
+#### Store Password (Optional)
 ```
 🐟 bare index.mjs test.com --store password
 Master password:
@@ -72,10 +77,8 @@ visual: 💢  🎁  🚀  💀  👼
 Enter password: 
 Storing value '******' with domain test.com and key 'password'
 ```
-Notice that the console never reveals passwords 
 
-and it will give it back, and copy to the clipboard like this:
-
+#### Retrieve Information
 ```
 🐟 bare index.mjs test.com
 Master password:
@@ -89,12 +92,10 @@ username : ryanr
 ✅ password copied to clipboard 📝
 ```
 
-Dealing with Password constraints
----------------------------------
+## Advanced Features
 
-Sometimes sites force you to change your password, or also can have weird rules. As such you can set options for a domain/url.
-The most important ones are lenth and suffix. You can get more generated characters wth length. suffix lets you add a counter like '_2' or
-special characters like '&)hU4'. To set the options for a site, use
+### Password Constraints
+Customize generated passwords for sites with specific requirements:
 
 ```
 🐟 bare index.mjs test.com --options --suffix "32&4" --length 15
@@ -102,31 +103,30 @@ special characters like '&)hU4'. To set the options for a site, use
 { length: 15, suffix: '32&4' }
 ```
 
-Device Replication
-------------------
+Key options:
+- `length`: Control password length
+- `suffix`: Add special characters or counters (e.g., '_2', '&)hU4')
 
-Nothing is ever stored on a server! So how to you sync between devices? Follow this pattern
+### Device Synchronization
+Securely sync between devices without cloud storage:
 
-1. Generate an invite from your host computer
-
+1. On primary device:
 ```
 bare index.mjs --invite
 ✅ invite copied to clipboard 📝
 ```
-Leave that computer running. The invite will be on your clipboard. On your other device accept the invite like so:
 
+2. On secondary device:
 ```
 bare index.mjs --accept yry63bx8eohgquiy9bj7andad81hkwk9z6a163z7ytg1iso7e3ajg3sr5xn8om5pmsn1u5r98kzh7rafmozci8yrnbgr1wibbpaiju8bnc
 ```
 
-Thats it! the two will sync. You probably want to leave at least on running in interactive mode, but otherwise it is magic 🪄
+The devices will automatically sync while running. ✨
 
-Profiles
---------
+### Profile Management
+Manage multiple accounts for the same domain using profiles:
 
-Lets say you have a work and a school account that both use google. No problem. Just add the --profile work switch and get a fresh lockrr
-
-
+#### Store Profile Information
 ```
 ❯ bare index.mjs google.com --store username ryanr@work.com --profile work
 Master password:
@@ -134,8 +134,8 @@ visual: 💢  🎁  🚀  💀  👼
 
 Storing value 'ryanr@work.com' with domain google.com and key 'username'
 ```
-Retrival from a profile
 
+#### Access Profile
 ```
 🐟 bare index.mjs google.com --profile work
 Master password:
