@@ -21,10 +21,16 @@ const lockrr = command(
   'lockrr',
   summary('lockrr password and secret manager'),
   description('A supergenpass compatible password generator with associated p2p storage.'),
-  flag('--invite', 'lockrr sharing invite'),
-  flag('--accept [invite]', 'accept a lockrr invite'),
-  flag('--store', 'enable store mode, to put a key/value in the lockrr'),
-  flag('--profile [profile]', 'isolated profile like "work", "school"'),
+  flag('--profile [profile]', 'isolated profile like "work", "school". Can be used with all modes.'),
+
+  flag('--invite', 'lockrr sharing invite [invite mode]'),
+  flag('--accept [invite]', 'accept a lockrr invite [accept mode]'),
+  flag('--store', 'put a key/value in the lockrr [store mode]'),
+  flag('--options', 'set the supergenpassword options for a url [options mode]'),
+  flag('--length [length]', 'Length of the generated password [options mode]'),
+  flag('--removeSubdomains', 'remove subdomains from the hostname before generating the password [options mode]'),
+  flag('--secret [secret]', 'A secret password to be appended to the master password before generating the password [options mode]'),
+  flag('--suffix [suffix]', 'A string added to the end of the generated password. Useful to satisfy password requirements [options mode]'),
   arg('<url>', 'the domain/url to store or retrieve secrets for'),
   arg('<key>', 'when in store mode, a key to store like "email"'),
   arg('<value>', 'when in store mode, the value for the key, like "bob@gmail.com"'),
@@ -33,6 +39,8 @@ const lockrr = command(
       await handleInviteMode(lockrr.flags.profile)
     } else if (lockrr.flags.accept) {
       await handleAcceptMode(lockrr.flags.accept, lockrr.flags.profile)
+    } else if (lockrr.flags.options) {
+      await handleOptionsMode(lockrr)
     } else if (lockrr.flags.store) {
       await handleStoreMode(lockrr)
     } else {
@@ -61,6 +69,29 @@ async function handleAcceptMode (invite, profile) {
   console.log('✅ invite accepted')
 }
 
+async function handleOptionsMode (lockrr) {
+  if (!lockrr.args.url) {
+    console.log('⚠️ no URL provided')
+    process.exit(1)
+  }
+  const autopass = await getAutopass(lockrr.flags.profile)
+  const domain = hostname(lockrr.args.url, {})
+  const currentOptions = await autopass.get(`options|${domain}`) || '{}'
+  const opts = JSON.parse(currentOptions)
+  // set any of the option mode flags
+  if (lockrr.flags.length) opts.length = lockrr.flags.length
+  if (lockrr.flags.secret) opts.secret = lockrr.flags.secret
+  if (lockrr.flags.suffix) opts.suffix = lockrr.flags.suffix
+
+  if (lockrr.flags.removeSubdomains) opts.removeSubdomains = true
+  else opts.removeSubdomains = false
+
+  await autopass.add(`options|${domain}`, JSON.stringify(opts))
+
+  await autopass.close()
+  process.exit(0)
+}
+
 async function handlePasswordMode (lockrr) {
   const autopass = await getAutopass(lockrr.flags.profile)
   const password = await getPassword()
@@ -71,8 +102,7 @@ async function handlePasswordMode (lockrr) {
     await handleRetrieveMode(autopass, domain, password)
     await autopass.close()
     process.exit(0)
-  }
-  else repeatMode(autopass, password)
+  } else repeatMode(autopass, password)
 }
 
 async function repeatMode (autopass, password) {
@@ -102,7 +132,7 @@ async function handleStoreMode (lockrr) {
   const { key, value } = lockrr.args
   console.log(`Storing value '${value}' with domain ${domain} and key '${key}'`)
   const encrypted = encryptEntry(password, value)
-  await autopass.add(`${domain}|${key}`, encrypted)
+  await autopass.add(`domain|${domain}|${key}`, encrypted)
   await autopass.close()
   process.exit(0)
 }
@@ -111,8 +141,8 @@ function handleRetrieveMode (autopass, domain, password) {
   return new Promise((resolve, reject) => {
     const entries = []
     const query = {
-      gt: `${domain}|`,
-      lt: `${domain}|~`
+      gt: `domain|${domain}|`,
+      lt: `domain|${domain}|~`
     }
 
     // Create the stream
@@ -131,25 +161,27 @@ function handleRetrieveMode (autopass, domain, password) {
     readstream.on('error', reject)
 
     readstream.on('end', () => {
-      // Handle all async operations after stream ends
-      sgp(password, domain, {})
-        .then(hash => toClipboard(hash))
-        .then(() => {
-          console.log('Domain:', domain)
+      autopass.get(`options|${domain}`).then(currentOptions => {
+        if (!currentOptions) currentOptions = '{}'
+        const opts = JSON.parse(currentOptions)
+        sgp(password, domain, opts)
+          .then(hash => toClipboard(hash))
+          .then(() => {
+            console.log('Domain:', domain)
 
-          if (entries.length) {
-            console.log('----------- store -----------')
-            entries.forEach(entry => {
-              if (entry.error) return console.log(entry.key, ': 🚨 error decrypting!')
-              console.log(entry.key, ':', entry.value)
-            })
-            console.log('-----------------------------')
-          }
+            if (entries.length) {
+              console.log('----------- store -----------')
+              entries.forEach(entry => {
+                if (entry.error) return console.log(entry.key, ': 🚨 error decrypting!')
+                console.log(entry.key, ':', entry.value)
+              })
+              console.log('-----------------------------')
+            }
 
-          console.log('✅ password copied to clipboard 📝\n')
-          resolve()
-        })
-        .catch(reject)
+            console.log('✅ password copied to clipboard 📝\n')
+            resolve()
+          }).catch(reject)
+      })
     })
   })
 }
