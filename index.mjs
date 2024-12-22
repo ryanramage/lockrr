@@ -125,7 +125,6 @@ async function handleRetrieveMode(autopass, domain, password) {
     await autopass.close()
     process.exit()
   })
-)
 
 lockrr.parse(process.argv.slice(2))
 
@@ -244,5 +243,7 @@ function clipboard () {
       return 'xclip -selection clipboard'
     case 'android':
       return 'termux-clipboard-set'
+    default:
+      throw new Error(`Unsupported platform: ${process.platform}`)
   }
 }
