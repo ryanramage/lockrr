@@ -19,8 +19,8 @@ const homeDir = env.HOME || env.USERPROFILE // USERPROFILE for Windows compatibi
 // Define the main 'lockrr' command
 const lockrr = command(
   'lockrr',
-  summary('lockrr command-line tool'),
-  description('A command-line tool to manage secrets in a lockrr.'),
+  summary('lockrr password and secret manager'),
+  description('A supergenpass compatible password generator with associated p2p storage.'),
   flag('--store', 'enable store mode, to put a key/value in the lockrr'),
   flag('--profile [profile]', 'isolated profile like "work", "school"'),
   arg('<url>', 'the domain/url to store or retrieve secrets for'),
@@ -29,6 +29,7 @@ const lockrr = command(
   async () => {
     if (!lockrr.args.url) {
       console.log('url is required')
+      console.log('add -h for help')
       process.exit(1)
     }
     const domain = hostname(lockrr.args.url, {})
