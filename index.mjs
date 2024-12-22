@@ -2,7 +2,7 @@
 import Corestore from 'corestore'
 import Autopass from 'autopass'
 import env from 'bare-env'
-import { command, arg, flag, summary, description, bail } from 'paparam'
+import { command, arg, flag, summary, description } from 'paparam'
 import process from 'bare-process'
 import readline from 'bare-readline'
 import { spawn } from 'bare-subprocess'
@@ -12,7 +12,6 @@ import crypto from 'hypercore-crypto'
 import { Writable } from 'streamx'
 import generate from './sgp/generate.mjs'
 import hostname from './sgp/hostname'
-
 
 const homeDir = env.HOME || env.USERPROFILE // USERPROFILE for Windows compatibility
 
@@ -37,11 +36,10 @@ const lockrr = command(
 
     if (lockrr.flags.store) {
       const { key, value } = lockrr.args
-      console.log(`Storing value '${value}' with domain ${domain} and key '${key}'`);
+      console.log(`Storing value '${value}' with domain ${domain} and key '${key}'`)
       await autopass.add(`${domain}|${key}`, value)
       await autopass.close()
       process.exit(0)
-
     }
 
     const entries = []
@@ -51,7 +49,7 @@ const lockrr = command(
     }
     const readstream = await autopass.list(query)
     readstream.on('data', (data) => {
-      const [_domain, key] = data.key.split('|')
+      const [, key] = data.key.split('|')
       const entry = { key, value: data.value }
       entries.push(entry)
     })
@@ -71,9 +69,9 @@ const lockrr = command(
       process.exit()
     })
   }
-);
+)
 
-lockrr.parse(process.argv.slice(2));
+lockrr.parse(process.argv.slice(2))
 
 async function getAutopass (profile) {
   if (!profile) profile = 'default'
@@ -87,10 +85,9 @@ async function run (domain) {
   const password = await getPassword()
   console.log('')
   emoji(password)
-  const hash = await sgp(password, domain, {  })
+  const hash = await sgp(password, domain, { })
   await toClipboard(hash)
 }
-
 
 function sgp (password, url, opts) {
   return new Promise((resolve, reject) => {
@@ -101,15 +98,14 @@ function sgp (password, url, opts) {
   })
 }
 
-
 function emoji (password) {
   // print out 5 emoji from a md5 hash
-  var buf = Buffer.from(password, 'utf8')
-  var bits = crypto.hash(buf)
-  var parts = []
-  for (var i = 0; i < 5; i++) {
-    var bit = bits.slice(i, i + 1)
-    var pic = baseEmoji.toUnicode(Buffer.from(bit, 'utf8'))
+  const buf = Buffer.from(password, 'utf8')
+  const bits = crypto.hash(buf)
+  const parts = []
+  for (let i = 0; i < 5; i++) {
+    const bit = bits.slice(i, i + 1)
+    const pic = baseEmoji.toUnicode(Buffer.from(bit, 'utf8'))
     parts.push(pic)
   }
   console.log('visual: ' + parts.join('  '))
@@ -134,13 +130,13 @@ function getPassword () {
   })
 }
 
-function toClipboard(text) {
+function toClipboard (text) {
   return new Promise((resolve, reject) => {
-    var proc = spawn(clipboard(), {
-      stdio: ["pipe", "ignore", "ignore"]
-    });
-    proc.on("error", reject);
-    proc.on("exit", () => resolve())
+    const proc = spawn(clipboard(), {
+      stdio: ['pipe', 'ignore', 'ignore']
+    })
+    proc.on('error', reject)
+    proc.on('exit', () => resolve())
     proc.stdin.write(text)
     proc.stdin.end()
   })
@@ -149,11 +145,11 @@ function toClipboard(text) {
 function clipboard () {
   switch (process.platform) {
     case 'darwin':
-      return 'pbcopy';
+      return 'pbcopy'
     case 'win32':
-      return 'clip';
+      return 'clip'
     case 'linux':
-      return 'xclip -selection clipboard';
+      return 'xclip -selection clipboard'
     case 'android':
       return 'termux-clipboard-set'
   }

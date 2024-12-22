@@ -36,7 +36,7 @@ function hash (method) {
     return method
   }
 
-  if (hashFunctions.hasOwnProperty(method)) {
+  if (hashFunctions[method]) {
     return hashFunctions[method]
   }
 
