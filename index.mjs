@@ -130,8 +130,16 @@ async function handleStoreMode (lockrr) {
   console.log('')
   emoji(password)
 
-  const { key, value } = lockrr.args
-  console.log(`Storing value '${value}' with domain ${domain} and key '${key}'`)
+  let { key, value } = lockrr.args
+
+  if (!value) {
+    value = await getPassword(`Enter ${key}: `)
+    const redacted = value.replace(/./g, '*')
+    console.log(`Storing value '${redacted}' with domain ${domain} and key '${key}'`)
+  } else {
+    console.log(`Storing value '${value}' with domain ${domain} and key '${key}'`)
+  }
+
   const encrypted = encryptEntry(password, value)
   await autopass.add(`domain|${domain}|${key}`, encrypted)
   await autopass.close()
@@ -143,14 +151,19 @@ async function handleRetrieveMode (autopass, domain, password) {
   const currentOptions = await autopass.get(`options|${domain}`) || '{}'
   const opts = JSON.parse(currentOptions)
   const hash = await sgp(password, domain, opts)
-  const final = opts.suffix ? hash + opts.suffix : hash
+  let final = opts.suffix ? hash + opts.suffix : hash
   console.log('Domain:', domain)
 
   if (entries.length) {
     console.log('----------- store -----------')
     entries.forEach(entry => {
       if (entry.error) return console.log(entry.key, ': 🚨 error decrypting!')
-      console.log(entry.key, ':', entry.value)
+      if (entry.key === 'password') {
+        final = entry.value
+        const redacted = entry.value.replace(/./g, '*')
+        console.log(entry.key, ':', redacted)
+
+      } else console.log(entry.key, ':', entry.value)
     })
     console.log('-----------------------------')
   }
@@ -255,9 +268,10 @@ function emoji (password) {
   console.log('')
 }
 
-function getPassword () {
+function getPassword (prompt) {
   return new Promise((resolve) => {
-    process.stderr.write('Master password: ')
+    if (!prompt) prompt = 'Master password: '
+    process.stderr.write(prompt)
     // console.log('Enter Password:')
     const stdin = new tty.ReadStream(0)
     stdin.setRawMode(true)
@@ -269,6 +283,7 @@ function getPassword () {
     rl.on('data', (line) => {
       stdin.setRawMode(false)
       rl.close()
+      console.log('returning line', line)
       resolve(line)
     })
   })
