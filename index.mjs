@@ -74,7 +74,8 @@ async function handlePasswordMode (lockrr) {
 }
 
 async function repeatMode (autopass, password) {
-  const domain = '' // TODO
+  const url = '' // TODO
+  const domain = hostname(url, {})
   await handleRetrieveMode(autopass, domain, password)
   repeatMode(autopass, password)
 }
