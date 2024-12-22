@@ -72,7 +72,7 @@ const lockrr = command(
       if (entries.length) {
         console.log('----------- store -----------')
         entries.forEach(entry => {
-          if (entry.error) return console.log(entry.key, ': error decrypting')
+          if (entry.error) return console.log(entry.key, ': 🚨 error decrypting!')
           console.log(entry.key, ':', entry.value)
         })
         console.log('-----------------------------')
