@@ -283,7 +283,6 @@ function getPassword (prompt) {
     rl.on('data', (line) => {
       stdin.setRawMode(false)
       rl.close()
-      console.log('returning line', line)
       resolve(line)
     })
   })
