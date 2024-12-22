@@ -28,7 +28,7 @@ const lockrr = command(
   flag('--store', 'put a key/value in the lockrr [store mode]'),
   flag('--options', 'set the supergenpassword options for a url [options mode]'),
   flag('--length [length]', 'Length of the generated password [options mode]'),
-  flag('--removeSubdomains', 'remove subdomains from the hostname before generating the password [options mode]'),
+  // flag('--removeSubdomains [removeSubdomains]', 'remove subdomains from the hostname before generating the password [options mode]'),
   flag('--secret [secret]', 'A secret password to be appended to the master password before generating the password [options mode]'),
   flag('--suffix [suffix]', 'A string added to the end of the generated password. Useful to satisfy password requirements [options mode]'),
   arg('<url>', 'the domain/url to store or retrieve secrets for'),
@@ -83,8 +83,7 @@ async function handleOptionsMode (lockrr) {
   if (lockrr.flags.secret) opts.secret = lockrr.flags.secret
   if (lockrr.flags.suffix) opts.suffix = lockrr.flags.suffix
 
-  if (lockrr.flags.removeSubdomains) opts.removeSubdomains = true
-  else opts.removeSubdomains = false
+  if (lockrr.flags.removeSubdomains) opts.removeSubdomains = lockrr.flags.removeSubdomains === 'true' ? true : false
 
   await autopass.add(`options|${domain}`, JSON.stringify(opts))
 
