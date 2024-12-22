@@ -48,12 +48,22 @@ const lockrr = command(
     readstream.on('data', (data) => {
       const [_domain, key] = data.key.split('|')
       const entry = { key, value: data.value }
-      console.log(key, ':', data.value)
       entries.push(entry)
     })
     readstream.on('end', async () => {
       await run(domain)
+
+      console.log('Domain:', domain)
+
+      if (entries.length) {
+        console.log('----------- store -----------')
+        entries.forEach(entry => console.log(entry.key, ':', entry.value))
+        console.log('-----------------------------')
+      }
+
+      console.log('✅ password copied to clipboard 📝\n')
       await autopass.close()
+      process.exit()
     })
   }
 );
@@ -70,11 +80,10 @@ async function getAutopass (profile) {
 
 async function run (domain) {
   const password = await getPassword()
+  console.log('')
   emoji(password)
   const hash = await sgp(password, domain, {  })
   await toClipboard(hash)
-  console.log('✓ password copied to clipboard\n')
-  process.exit()
 }
 
 
@@ -98,12 +107,13 @@ function emoji (password) {
     var pic = baseEmoji.toUnicode(Buffer.from(bit, 'utf8'))
     parts.push(pic)
   }
-  console.log('password check: ' + parts.join('  '))
+  console.log('visual: ' + parts.join('  '))
 }
 
 function getPassword () {
   return new Promise((resolve) => {
-    console.log('Enter Password:')
+    process.stderr.write('Master password: ')
+    // console.log('Enter Password:')
     const stdin = new tty.ReadStream(0)
     stdin.setRawMode(true)
     const mask = (_data, cb) => cb(null, '*')
