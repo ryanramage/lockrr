@@ -85,44 +85,52 @@ async function handleStoreMode (lockrr) {
   process.exit(0)
 }
 
-async function handleRetrieveMode (autopass, domain, password) {
-  return new Promise(async (resolve) => {
+function handleRetrieveMode (autopass, domain, password) {
+  return new Promise((resolve, reject) => {
     const entries = []
     const query = {
       gt: `${domain}|`,
       lt: `${domain}|~`
     }
 
-    const readstream = await autopass.list(query)
-    readstream.on('data', (data) => {
-      const [, key] = data.key.split('|')
-      try {
-        const decrypted = decryptEntry(password, data.value)
-        const entry = { key, value: decrypted }
-        entries.push(entry)
-      } catch (err) {
-        const entry = { key, error: err }
-        entries.push(entry)
-      }
-    })
-
-    readstream.on('end', async () => {
-      const hash = await sgp(password, domain, { })
-      await toClipboard(hash)
-      console.log('Domain:', domain)
-
-      if (entries.length) {
-        console.log('----------- store -----------')
-        entries.forEach(entry => {
-          if (entry.error) return console.log(entry.key, ': 🚨 error decrypting!')
-          console.log(entry.key, ':', entry.value)
+    // Create the stream
+    autopass.list(query)
+      .then(readstream => {
+        readstream.on('data', (data) => {
+          const [, key] = data.key.split('|')
+          try {
+            const decrypted = decryptEntry(password, data.value)
+            entries.push({ key, value: decrypted })
+          } catch (err) {
+            entries.push({ key, error: err })
+          }
         })
-        console.log('-----------------------------')
-      }
 
-      console.log('✅ password copied to clipboard 📝\n')
-      resolve()
-    })
+        readstream.on('error', reject)
+
+        readstream.on('end', () => {
+          // Handle all async operations after stream ends
+          sgp(password, domain, {})
+            .then(hash => toClipboard(hash))
+            .then(() => {
+              console.log('Domain:', domain)
+
+              if (entries.length) {
+                console.log('----------- store -----------')
+                entries.forEach(entry => {
+                  if (entry.error) return console.log(entry.key, ': 🚨 error decrypting!')
+                  console.log(entry.key, ':', entry.value)
+                })
+                console.log('-----------------------------')
+              }
+
+              console.log('✅ password copied to clipboard 📝\n')
+              resolve()
+            })
+            .catch(reject)
+        })
+      })
+      .catch(reject)
   })
 }
 
