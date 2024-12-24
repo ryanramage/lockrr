@@ -1,10 +1,11 @@
 {
   "name": "lockrr",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "index.mjs",
   "scripts": {
     "test": "standard",
-    "fix": "standard --fix"
+    "fix": "standard --fix",
+    "start": "bare index.mjs"
   },
   "author": "Ryan Ramage",
   "license": "ISC",
@@ -23,10 +24,13 @@
     "hypercore-crypto": "^3.4.2",
     "paparam": "^1.6.2",
     "sodium-universal": "^4.0.1",
-    "streamx": "^2.21.1",
-    "supergenpass-lib": "^3.0.1"
+    "streamx": "^2.21.1"
   },
   "devDependencies": {
     "standard": "^17.1.2"
+  },
+  "pear": {
+    "name": "lockrr",
+    "type": "terminal"
   }
 }
