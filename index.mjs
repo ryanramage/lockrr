@@ -49,7 +49,8 @@ const lockrr = command(
     }
   }
 )
-const position = process.argv[2] === '.' ? 3 : 2
+const first = process.argv[2]
+const position = (first === '.' || first.startsWith('pear://')) ? 3 : 2
 lockrr.parse(process.argv.slice(position)) // this starts everything
 
 async function handleInviteMode (profile) {
