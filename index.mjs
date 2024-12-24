@@ -49,7 +49,8 @@ const lockrr = command(
     }
   }
 )
-lockrr.parse(process.argv.slice(2)) // this starts everything
+const position = process.argv[2] === '.' ? 3 : 2
+lockrr.parse(process.argv.slice(position)) // this starts everything
 
 async function handleInviteMode (profile) {
   const autopass = await getAutopass(profile)
