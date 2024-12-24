@@ -108,7 +108,7 @@ async function handlePasswordMode (lockrr) {
 }
 
 async function repeatMode (autopass, password) {
-  console.log('Enter URL: ')
+  process.stderr.write('Enter URL: ')
   const url = await new Promise((resolve) => {
     const rl = readline.createInterface({
       input: stdin,
@@ -272,15 +272,24 @@ function getPassword (prompt) {
   return new Promise((resolve) => {
     if (!prompt) prompt = 'Master password: '
     process.stderr.write(prompt)
-    // console.log('Enter Password:')
     stdin.setRawMode(true)
-    const mask = (_data, cb) => cb(null, '*')
+    const mask = (_data, cb) => {
+      if (_data === '\x1b[2D') return cb(null)
+      process.stdout.write('*')
+      cb(null)
+    }
+    const mockWriter = new Writable({ write: mask })
     const rl = readline.createInterface({
       input: stdin,
-      output: new Writable({ write: mask })
+      output: mockWriter
+    })
+    let gotLine = false
+    rl.on('close', () => {
+      if (!gotLine) process.exit(0)
     })
     rl.on('data', (line) => {
       stdin.setRawMode(false)
+      gotLine = true
       rl.close()
       resolve(line)
     })
