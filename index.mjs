@@ -27,6 +27,7 @@ const lockrr = command(
   flag('--invite', 'lockrr sharing invite [invite mode]'),
   flag('--accept [invite]', 'accept a lockrr invite [accept mode]'),
   flag('--store', 'put a key/value in the lockrr [store mode]'),
+  flag('--search', 'search domain/urls with a start prfix'),
   flag('--options', 'set the supergenpassword options for a url [options mode]'),
   flag('--length [length]', 'Length of the generated password [options mode]'),
   // flag('--removeSubdomains [removeSubdomains]', 'remove subdomains from the hostname before generating the password [options mode]'),
@@ -44,6 +45,8 @@ const lockrr = command(
       await handleOptionsMode(lockrr)
     } else if (lockrr.flags.store) {
       await handleStoreMode(lockrr)
+    } else if (lockrr.flags.search) {
+      await handleSearchMode(lockrr)
     } else {
       await handlePasswordMode(lockrr)
     }
@@ -147,6 +150,37 @@ async function handleStoreMode (lockrr) {
   await autopass.add(`domain|${domain}|${key}`, encrypted)
   await autopass.close()
   process.exit(0)
+}
+
+async function handleSearchMode (lockrr) {
+  const autopass = await getAutopass(lockrr.flags.profile)
+  const entries = {}
+  const prefix = lockrr.args.url
+  const query = prefix ? {
+    gt: `domain|${prefix}`,
+    lt: `domain|${prefix}~~~~~~~|~`
+  } : null
+
+  const onEntry = (domain, key) => {
+    if (!entries[domain]) entries[domain] = {}
+    entries[domain][key] = true
+  }
+
+  const readstream = autopass.list(query)
+  readstream.on('data', (data) => {
+    const parts = data.key.split('|')
+    if (parts[0] === 'options') onEntry(parts[1], 'options')
+    if (parts[0] === 'domain') onEntry(parts[1], parts[2])
+  })
+  readstream.on('end', async () => {
+    const keys = Object.keys(entries)
+    keys.forEach(domain => {
+      const keys = Object.keys(entries[domain])
+      console.log(`${domain}\t\t[${keys}]`)
+    })
+    await autopass.close()
+    process.exit(0)
+  })
 }
 
 async function handleRetrieveMode (autopass, domain, password) {
