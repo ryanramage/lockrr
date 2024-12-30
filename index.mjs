@@ -30,6 +30,7 @@ const lockrr = command(
   flag('--search', 'search domain/urls with a start prfix'),
   flag('--options', 'set the supergenpassword options for a url [options mode]'),
   flag('--length [length]', 'Length of the generated password [options mode]'),
+  flag('--method [algo]', 'default is md5, can set to sha512 [options mode]'),
   // flag('--removeSubdomains [removeSubdomains]', 'remove subdomains from the hostname before generating the password [options mode]'),
   flag('--secret [secret]', 'A secret password to be appended to the master password before generating the password [options mode]'),
   flag('--suffix [suffix]', 'A string added to the end of the generated password. Useful to satisfy password requirements [options mode]'),
@@ -88,6 +89,7 @@ async function handleOptionsMode (lockrr) {
   if (lockrr.flags.length) opts.length = Number(lockrr.flags.length)
   if (lockrr.flags.secret) opts.secret = lockrr.flags.secret
   if (lockrr.flags.suffix) opts.suffix = lockrr.flags.suffix
+  if (lockrr.flags.method) opts.method = lockrr.flags.method
 
   if (lockrr.flags.removeSubdomains) opts.removeSubdomains = lockrr.flags.removeSubdomains === 'true'
 
@@ -156,10 +158,12 @@ async function handleSearchMode (lockrr) {
   const autopass = await getAutopass(lockrr.flags.profile)
   const entries = {}
   const prefix = lockrr.args.url
-  const query = prefix ? {
-    gt: `domain|${prefix}`,
-    lt: `domain|${prefix}~~~~~~~|~`
-  } : null
+  const query = prefix
+    ? {
+        gt: `domain|${prefix}`,
+        lt: `domain|${prefix}~~~~~~~|~`
+      }
+    : null
 
   const onEntry = (domain, key) => {
     if (!entries[domain]) entries[domain] = {}

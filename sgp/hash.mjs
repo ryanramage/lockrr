@@ -6,6 +6,7 @@
  */
 
 import sodium from 'sodium-universal'
+import md5omatic from 'md5-o-matic'
 
 // Replace non-alphanumeric and padding characters in the Base-64 alphabet to
 // comply with most password policies.
@@ -24,7 +25,11 @@ function customBase64Hash (str, hashFunction) {
 }
 
 const hashFunctions = {
-  // md5: str => customBase64Hash(str, md5),
+  md5: str => {
+    const result = md5omatic(str)
+    const hash = Buffer.from(result, 'hex').toString('base64')
+    return customBase64(hash)
+  },
   sha512: str => customBase64Hash(str, sodium.crypto_hash_sha512)
 }
 

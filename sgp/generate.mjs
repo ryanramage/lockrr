@@ -38,7 +38,7 @@ function generate (
   const defaults = {
     hashRounds: 10,
     length: 10,
-    method: 'sha512',
+    method: 'md5',
     passthrough: false,
     removeSubdomains: true,
     secret: ''

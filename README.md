@@ -10,6 +10,9 @@ A secure CLI password(less) manager that puts your security first.
 - **Flexible Storage**: Securely store auxiliary information like usernames and notes
 - **Optional Encryption**: Can encrypt and store actual passwords if needed
 
+This generator is equivalent to https://chriszarate.github.io/supergenpass which is important. 
+If you dont have access to this generator, you can always use that bookmark in a pinch.
+
 ## Quick Start
 
 ### Prerequisites
