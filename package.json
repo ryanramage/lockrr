@@ -22,6 +22,7 @@
     "base-emoji": "^2.0.1",
     "corestore": "^6.18.4",
     "hypercore-crypto": "^3.4.2",
+    "md5-o-matic": "^0.1.1",
     "paparam": "^1.6.2",
     "sodium-universal": "^4.0.1",
     "streamx": "^2.21.1"

@@ -156,10 +156,12 @@ async function handleSearchMode (lockrr) {
   const autopass = await getAutopass(lockrr.flags.profile)
   const entries = {}
   const prefix = lockrr.args.url
-  const query = prefix ? {
-    gt: `domain|${prefix}`,
-    lt: `domain|${prefix}~~~~~~~|~`
-  } : null
+  const query = prefix
+    ? {
+        gt: `domain|${prefix}`,
+        lt: `domain|${prefix}~~~~~~~|~`
+      }
+    : null
 
   const onEntry = (domain, key) => {
     if (!entries[domain]) entries[domain] = {}
