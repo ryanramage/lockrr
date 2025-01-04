@@ -10,6 +10,7 @@ import tty from 'bare-tty'
 import baseEmoji from 'base-emoji'
 import crypto from 'hypercore-crypto'
 import sodium from 'sodium-universal'
+import http from 'bare-http1'
 import { Writable } from 'streamx'
 import generate from './sgp/generate.mjs'
 import hostname from './sgp/hostname'
@@ -23,6 +24,7 @@ const lockrr = command(
   summary('lockrr password and secret manager'),
   description('A supergenpass compatible password generator with associated p2p storage.'),
   flag('--profile [profile]', 'isolated profile like "work", "school". Can be used with all modes.'),
+  flag('--http', 'start the lockrr http server'),
 
   flag('--invite', 'lockrr sharing invite [invite mode]'),
   flag('--accept [invite]', 'accept a lockrr invite [accept mode]'),
@@ -103,6 +105,35 @@ async function handleOptionsMode (lockrr) {
 
 async function handlePasswordMode (lockrr) {
   const autopass = await getAutopass(lockrr.flags.profile)
+  if (lockrr.flags.http) {
+    console.log('starting http server on port 6421')
+    const server = http.createServer(async (req, res) => {
+      if (req.method !== 'GET') {
+        res.writeHead(400)
+        res.end()
+        return
+      }
+      const { pathname, searchParams } = parseURL(req.url)
+      const domain = hostname(searchParams.get('domain'))
+      if (pathname === '/options') {
+        const currentOptions = await autopass.get(`options|${domain}`) || '{}'
+        const opts = JSON.parse(currentOptions)
+        const data = JSON.stringify(opts)
+        res.setHeader('Content-Length', data.length)
+        res.write(data)
+        res.end()
+        return
+      }
+      const final = searchParams.get('pw')
+      const entries = await getDomainEntries(autopass, domain, final)
+      res.statusCode = 200
+      const data = JSON.stringify(entries)
+      res.setHeader('Content-Length', data.length)
+      res.write(data)
+      res.end()
+    })
+    server.listen(6421, () => {})
+  }
   const password = await getPassword()
   console.log('')
   emoji(password)
@@ -138,6 +169,10 @@ async function handleStoreMode (lockrr) {
   console.log('')
   emoji(password)
 
+  const currentOptions = await autopass.get(`options|${domain}`) || '{}'
+  const opts = JSON.parse(currentOptions)
+  const hash = await sgp(password, domain, opts)
+  let final = opts.suffix ? hash + opts.suffix : hash
   let { key, value } = lockrr.args
 
   if (!value) {
@@ -148,7 +183,7 @@ async function handleStoreMode (lockrr) {
     console.log(`Storing value '${value}' with domain ${domain} and key '${key}'`)
   }
 
-  const encrypted = encryptEntry(password, value)
+  const encrypted = encryptEntry(final, value)
   await autopass.add(`domain|${domain}|${key}`, encrypted)
   await autopass.close()
   process.exit(0)
@@ -188,11 +223,11 @@ async function handleSearchMode (lockrr) {
 }
 
 async function handleRetrieveMode (autopass, domain, password) {
-  const entries = await getDomainEntries(autopass, domain, password)
   const currentOptions = await autopass.get(`options|${domain}`) || '{}'
   const opts = JSON.parse(currentOptions)
   const hash = await sgp(password, domain, opts)
   let final = opts.suffix ? hash + opts.suffix : hash
+  const entries = await getDomainEntries(autopass, domain, final)
   console.log('Domain:', domain)
 
   if (entries.length) {
@@ -361,4 +396,19 @@ function clipboard () {
     default:
       throw new Error(`Unsupported platform: ${process.platform}`)
   }
+}
+
+function parseURL (url) {
+  const [pathname, query] = url.split('?')
+  const queryParams = (query || '').split('&')
+  const searchParams = new Map()
+
+  for (const params of queryParams) {
+    if (!params) continue
+
+    const [key, value] = params.split('=')
+    searchParams.set(key, value || null)
+  }
+
+  return { pathname, searchParams }
 }
