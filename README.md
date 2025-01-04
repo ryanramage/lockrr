@@ -8,11 +8,13 @@ A CLI password(less) manager that puts your security first.
 - **Single Master Password**: Keep one strong password in your head
 - **Unique Generation**: Creates distinct passwords for each domain
 - **Flexible Storage**: Securely store auxiliary information like usernames and notes
+- **improves supergenpass** [read about supergenpass](SUPERGENPASS.md) and lockrr improves the security and experience
 - **Optional Encryption**: Can encrypt and store actual passwords if needed
 - [Lockrr Chrome Extension](https://github.com/ryanramage/lockrr-chrome-extension) for better UX in a desktop browser
 
 This generator is equivalent to https://chriszarate.github.io/supergenpass which is important. 
 If you dont have access to this generator, you can always use that bookmark in a pinch.
+
 
 ## Quick Start
 
