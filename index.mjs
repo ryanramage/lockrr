@@ -24,7 +24,7 @@ const lockrr = command(
   summary('lockrr password and secret manager'),
   description('A supergenpass compatible password generator with associated p2p storage.'),
   flag('--profile [profile]', 'isolated profile like "work", "school". Can be used with all modes.'),
-  flag('--http', 'start the lockrr http server'),
+  flag('--http', 'start the http server to support chrome extension'),
 
   flag('--invite', 'lockrr sharing invite [invite mode]'),
   flag('--accept [invite]', 'accept a lockrr invite [accept mode]'),
@@ -106,33 +106,7 @@ async function handleOptionsMode (lockrr) {
 async function handlePasswordMode (lockrr) {
   const autopass = await getAutopass(lockrr.flags.profile)
   if (lockrr.flags.http) {
-    console.log('starting http server on port 6421')
-    const server = http.createServer(async (req, res) => {
-      if (req.method !== 'GET') {
-        res.writeHead(400)
-        res.end()
-        return
-      }
-      const { pathname, searchParams } = parseURL(req.url)
-      const domain = hostname(searchParams.get('domain'))
-      if (pathname === '/options') {
-        const currentOptions = await autopass.get(`options|${domain}`) || '{}'
-        const opts = JSON.parse(currentOptions)
-        const data = JSON.stringify(opts)
-        res.setHeader('Content-Length', data.length)
-        res.write(data)
-        res.end()
-        return
-      }
-      const final = searchParams.get('pw')
-      const entries = await getDomainEntries(autopass, domain, final)
-      res.statusCode = 200
-      const data = JSON.stringify(entries)
-      res.setHeader('Content-Length', data.length)
-      res.write(data)
-      res.end()
-    })
-    server.listen(6421, () => {})
+    startHttpServer(autopass)
   }
   const password = await getPassword()
   console.log('')
@@ -411,4 +385,34 @@ function parseURL (url) {
   }
 
   return { pathname, searchParams }
+}
+
+function startHttpServer (autopass) {
+  console.log('starting http server on port 6421')
+  const server = http.createServer(async (req, res) => {
+    if (req.method !== 'GET') {
+      res.writeHead(400)
+      res.end()
+      return
+    }
+    const { pathname, searchParams } = parseURL(req.url)
+    const domain = hostname(searchParams.get('domain'))
+    if (pathname === '/options') {
+      const currentOptions = await autopass.get(`options|${domain}`) || '{}'
+      const opts = JSON.parse(currentOptions)
+      const data = JSON.stringify(opts)
+      res.setHeader('Content-Length', data.length)
+      res.write(data)
+      res.end()
+      return
+    }
+    const final = searchParams.get('pw')
+    const entries = await getDomainEntries(autopass, domain, final)
+    res.statusCode = 200
+    const data = JSON.stringify(entries)
+    res.setHeader('Content-Length', data.length)
+    res.write(data)
+    res.end()
+  })
+  server.listen(6421, () => {})
 }

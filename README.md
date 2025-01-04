@@ -1,6 +1,6 @@
 # 🔒𝕣𝕣 lockrr
 
-A secure CLI password(less) manager that puts your security first.
+A CLI password(less) manager that puts your security first.
 
 ## Why lockrr?
 
@@ -32,7 +32,7 @@ npm i
 
 Start the interactive mode with:
 ```
-bare index.mjs
+bare index.mjs --http
 ```
 
 #### What to Expect:
@@ -41,6 +41,7 @@ bare index.mjs
 3. Enter domain/URL
 4. View stored information
 5. Get generated password (auto-copied to clipboard)
+6. the optional --http flag allows the chrome plugin to communicate locally with lockrr
 
 Example session:
 ```
