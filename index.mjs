@@ -414,5 +414,5 @@ function startHttpServer (autopass) {
     res.write(data)
     res.end()
   })
-  server.listen(6421, () => {})
+  server.listen(49494, () => {})
 }
