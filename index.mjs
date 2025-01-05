@@ -17,6 +17,7 @@ import hostname from './sgp/hostname'
 
 const homeDir = env.HOME || env.USERPROFILE // USERPROFILE for Windows compatibility
 const stdin = new tty.ReadStream(0)
+const port = 49494
 
 // Define the main 'lockrr' command
 const lockrr = command(
@@ -388,7 +389,7 @@ function parseURL (url) {
 }
 
 function startHttpServer (autopass) {
-  console.log('starting http server on port 6421')
+  console.log(`starting http server on port ${port}`)
   const server = http.createServer(async (req, res) => {
     if (req.method !== 'GET') {
       res.writeHead(400)
@@ -414,5 +415,5 @@ function startHttpServer (autopass) {
     res.write(data)
     res.end()
   })
-  server.listen(49494, () => {})
+  server.listen(port, () => {})
 }
