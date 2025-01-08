@@ -25,7 +25,7 @@ const lockrr = command(
   summary('lockrr password and secret manager'),
   description('A supergenpass compatible password generator with associated p2p storage.'),
   flag('--profile [profile]', 'isolated profile like "work", "school". Can be used with all modes.'),
-  flag('--http', 'start the http server to support chrome extension'),
+  flag('--nohttp', 'dont start the http server will disable chrome extension support'),
 
   flag('--invite', 'lockrr sharing invite [invite mode]'),
   flag('--accept [invite]', 'accept a lockrr invite [accept mode]'),
@@ -106,7 +106,7 @@ async function handleOptionsMode (lockrr) {
 
 async function handlePasswordMode (lockrr) {
   const autopass = await getAutopass(lockrr.flags.profile)
-  if (lockrr.flags.http) {
+  if (!lockrr.flags.http) {
     startHttpServer(autopass)
   }
   const password = await getPassword()
@@ -389,7 +389,7 @@ function parseURL (url) {
 }
 
 function startHttpServer (autopass) {
-  console.log(`starting http server on port ${port}`)
+  console.log(`🔌 chrome extension support running (see https://github.com/ryanramage/lockrr-chrome-extension)`)
   const server = http.createServer(async (req, res) => {
     if (req.method !== 'GET') {
       res.writeHead(400)
@@ -402,6 +402,19 @@ function startHttpServer (autopass) {
       const currentOptions = await autopass.get(`options|${domain}`) || '{}'
       const opts = JSON.parse(currentOptions)
       const data = JSON.stringify(opts)
+      res.setHeader('Content-Length', data.length)
+      res.write(data)
+      res.end()
+      return
+    }
+    if (pathname === '/store') {
+      const currentOptions = await autopass.get(`options|${domain}`) || '{}'
+      const final = searchParams.get('pw')
+      const key = searchParams.get('key')
+      const value = searchParams.get('value')
+      const encrypted = encryptEntry(final, value)
+      await autopass.add(`domain|${domain}|${key}`, encrypted)
+      const data = JSON.stringify({ ok: true })
       res.setHeader('Content-Length', data.length)
       res.write(data)
       res.end()
