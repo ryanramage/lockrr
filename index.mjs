@@ -7,6 +7,7 @@ import process from 'bare-process'
 import readline from 'bare-readline'
 import { spawn } from 'bare-subprocess'
 import tty from 'bare-tty'
+import md5omatic from 'md5-o-matic'
 import baseEmoji from 'base-emoji'
 import crypto from 'hypercore-crypto'
 import sodium from 'sodium-universal'
@@ -305,13 +306,11 @@ function sgp (password, url, opts) {
 }
 
 function emoji (password) {
-  // print out 5 emoji from a md5 hash
-  const buf = Buffer.from(password, 'utf8')
-  const bits = crypto.hash(buf)
-  const parts = []
-  for (let i = 0; i < 5; i++) {
-    const bit = bits.slice(i, i + 1)
-    const pic = baseEmoji.toUnicode(Buffer.from(bit, 'utf8'))
+  const bits = md5omatic(password)
+  var parts = []
+  for (var i = 0; i < 5; i++) {
+    var bit = bits.slice(i, i + 1)
+    var pic = baseEmoji.toUnicode(Buffer.from(bit, 'utf8'))
     parts.push(pic)
   }
   console.log('visual: ' + parts.join('  '))
