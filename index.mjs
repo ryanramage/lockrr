@@ -27,7 +27,7 @@ const lockrr = command(
   description('A supergenpass compatible password generator with associated p2p storage.'),
   flag('--profile [profile]', 'isolated profile like "work", "school". Can be used with all modes.'),
   flag('--nohttp', 'dont start the http server will disable chrome extension support'),
-
+  flag('--token', 'regnerate the http token'),
   flag('--invite', 'lockrr sharing invite [invite mode]'),
   flag('--accept [invite]', 'accept a lockrr invite [accept mode]'),
   flag('--store', 'put a key/value in the lockrr [store mode]'),
@@ -42,6 +42,13 @@ const lockrr = command(
   arg('<key>', 'when in store mode, a key to store like "email"'),
   arg('<value>', 'when in store mode, the value for the key, like "bob@gmail.com"'),
   async () => {
+    if (lockrr.flags.token) {
+      const autopass = await getAutopass(lockrr.flags.profile)
+      const newToken = await generateHTTPToken(autopass)
+      console.log(`🔌 http token: ${newToken}`)
+      console.log('store this. only shows once')
+      process.exit(0)
+    }
     if (lockrr.flags.invite) {
       await handleInviteMode(lockrr.flags.profile)
     } else if (lockrr.flags.accept) {
@@ -108,7 +115,7 @@ async function handleOptionsMode (lockrr) {
 async function handlePasswordMode (lockrr) {
   const autopass = await getAutopass(lockrr.flags.profile)
   if (!lockrr.flags.http) {
-    startHttpServer(autopass)
+    await startHttpServer(autopass)
   }
   const password = await getPassword()
   console.log('')
@@ -148,7 +155,7 @@ async function handleStoreMode (lockrr) {
   const currentOptions = await autopass.get(`options|${domain}`) || '{}'
   const opts = JSON.parse(currentOptions)
   const hash = await sgp(password, domain, opts)
-  let final = opts.suffix ? hash + opts.suffix : hash
+  const final = opts.suffix ? hash + opts.suffix : hash
   let { key, value } = lockrr.args
 
   if (!value) {
@@ -307,10 +314,10 @@ function sgp (password, url, opts) {
 
 function emoji (password) {
   const bits = md5omatic(password)
-  var parts = []
-  for (var i = 0; i < 5; i++) {
-    var bit = bits.slice(i, i + 1)
-    var pic = baseEmoji.toUnicode(Buffer.from(bit, 'utf8'))
+  const parts = []
+  for (let i = 0; i < 5; i++) {
+    const bit = bits.slice(i, i + 1)
+    const pic = baseEmoji.toUnicode(Buffer.from(bit, 'utf8'))
     parts.push(pic)
   }
   console.log('visual: ' + parts.join('  '))
@@ -387,11 +394,32 @@ function parseURL (url) {
   return { pathname, searchParams }
 }
 
-function startHttpServer (autopass) {
-  console.log(`🔌 chrome extension support running (see https://github.com/ryanramage/lockrr-chrome-extension)`)
+async function generateHTTPToken (autopass) {
+  const token = crypto.randomBytes(32).toString('hex')
+  await autopass.add('internal|httpToken', token)
+  return token
+}
+
+async function startHttpServer (autopass) {
+  // we need to use an auth token. if not set create one, log it, and exit
+  const token = await autopass.get('internal|httpToken')
+  if (!token) {
+    const newToken = await generateHTTPToken(autopass)
+    console.log(`🔌 http token: ${newToken}`)
+    console.log('store this. only shows once')
+    process.exit(0)
+  }
+
+  console.log('🔌 chrome extension support running (see https://github.com/ryanramage/lockrr-chrome-extension)')
   const server = http.createServer(async (req, res) => {
     if (req.method !== 'GET') {
       res.writeHead(400)
+      res.end()
+      return
+    }
+    const _token = req.headers['x-lockrr-token']
+    if (_token !== token) {
+      res.writeHead(401)
       res.end()
       return
     }
@@ -407,7 +435,6 @@ function startHttpServer (autopass) {
       return
     }
     if (pathname === '/store') {
-      const currentOptions = await autopass.get(`options|${domain}`) || '{}'
       const final = searchParams.get('pw')
       const key = searchParams.get('key')
       const value = searchParams.get('value')
