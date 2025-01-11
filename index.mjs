@@ -394,6 +394,17 @@ function parseURL (url) {
   return { pathname, searchParams }
 }
 
+const cachedAutopasses = {}
+
+async function getProfileAutopass (defaultAutopass, profile) {
+  if (!profile) return defaultAutopass
+  if (profile === '') return defaultAutopass
+  if (profile === 'default') return defaultAutopass
+  if (cachedAutopasses[profile]) return cachedAutopasses[profile]
+  cachedAutopasses[profile] = await getAutopass(profile)
+  return cachedAutopasses[profile]
+}
+
 async function generateHTTPToken (autopass) {
   const token = crypto.randomBytes(32).toString('hex')
   await autopass.add('internal|httpToken', token)
@@ -425,8 +436,11 @@ async function startHttpServer (autopass) {
     }
     const { pathname, searchParams } = parseURL(req.url)
     const domain = hostname(searchParams.get('domain'))
+    const profile = searchParams.get('profile')
+    const _autopass = await getProfileAutopass(autopass, profile)
+
     if (pathname === '/options') {
-      const currentOptions = await autopass.get(`options|${domain}`) || '{}'
+      const currentOptions = await _autopass.get(`options|${domain}`) || '{}'
       const opts = JSON.parse(currentOptions)
       const data = JSON.stringify(opts)
       res.setHeader('Content-Length', data.length)
@@ -439,7 +453,7 @@ async function startHttpServer (autopass) {
       const key = searchParams.get('key')
       const value = searchParams.get('value')
       const encrypted = encryptEntry(final, value)
-      await autopass.add(`domain|${domain}|${key}`, encrypted)
+      await _autopass.add(`domain|${domain}|${key}`, encrypted)
       const data = JSON.stringify({ ok: true })
       res.setHeader('Content-Length', data.length)
       res.write(data)
@@ -447,7 +461,7 @@ async function startHttpServer (autopass) {
       return
     }
     const final = searchParams.get('pw')
-    const entries = await getDomainEntries(autopass, domain, final)
+    const entries = await getDomainEntries(_autopass, domain, final)
     res.statusCode = 200
     const data = JSON.stringify(entries)
     res.setHeader('Content-Length', data.length)
