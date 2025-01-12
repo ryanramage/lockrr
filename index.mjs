@@ -448,6 +448,20 @@ async function startHttpServer (autopass) {
       res.end()
       return
     }
+    if (pathname === '/options/set') {
+      const currentOptions = await autopass.get(`options|${domain}`) || '{}'
+      const opts = JSON.parse(currentOptions)
+      if (searchParams.has('length')) opts.length = Number(searchParams.get('length'))
+      if (searchParams.has('secret')) opts.secret = searchParams.get('secret')
+      if (searchParams.has('suffix')) opts.suffix = searchParams.get('suffix')
+      if (searchParams.has('method')) opts.method = searchParams.get('method')
+      await autopass.add(`options|${domain}`, JSON.stringify(opts))
+      const data = JSON.stringify({ ok: true })
+      res.setHeader('Content-Length', data.length)
+      res.write(data)
+      res.end()
+      return
+    }
     if (pathname === '/store') {
       const final = searchParams.get('pw')
       const key = searchParams.get('key')
