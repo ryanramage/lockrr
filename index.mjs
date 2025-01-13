@@ -438,10 +438,9 @@ async function startHttpServer (autopass) {
     const domain = hostname(searchParams.get('domain'))
     const profile = searchParams.get('profile')
     const _autopass = await getProfileAutopass(autopass, profile)
-
     if (pathname === '/options') {
       const currentOptions = await _autopass.get(`options|${domain}`) || '{}'
-      const opts = JSON.parse(currentOptions)
+      const opts = JSON.parse(currentOptions, domain)
       const data = JSON.stringify(opts)
       res.setHeader('Content-Length', data.length)
       res.write(data)
@@ -449,13 +448,21 @@ async function startHttpServer (autopass) {
       return
     }
     if (pathname === '/options/set') {
-      const currentOptions = await autopass.get(`options|${domain}`) || '{}'
+      const currentOptions = await _autopass.get(`options|${domain}`) || '{}'
       const opts = JSON.parse(currentOptions)
       if (searchParams.has('length')) opts.length = Number(searchParams.get('length'))
-      if (searchParams.has('secret')) opts.secret = searchParams.get('secret')
-      if (searchParams.has('suffix')) opts.suffix = searchParams.get('suffix')
+      if (searchParams.has('secret')) {
+        const secret = searchParams.get('secret')
+        if (!secret) delete opts.secret
+        else if (secret.length > 0) opts.secret = secret
+      }
+      if (searchParams.has('suffix')) {
+        const suffix = searchParams.get('suffix')
+        if (!suffix) delete opts.suffix
+        else if (suffix.length > 0) opts.suffix = suffix
+      }
       if (searchParams.has('method')) opts.method = searchParams.get('method')
-      await autopass.add(`options|${domain}`, JSON.stringify(opts))
+      await _autopass.add(`options|${domain}`, JSON.stringify(opts))
       const data = JSON.stringify({ ok: true })
       res.setHeader('Content-Length', data.length)
       res.write(data)
