@@ -461,9 +461,11 @@ async function startHttpServer (autopass) {
         if (!suffix) delete opts.suffix
         else if (suffix.length > 0) opts.suffix = suffix
       }
-      if (searchParams.has('method')) opts.method = searchParams.get('method')
+      if (searchParams.has('method')) {
+        opts.method = searchParams.get('method')
+      }
       await _autopass.add(`options|${domain}`, JSON.stringify(opts))
-      const data = JSON.stringify({ ok: true })
+      const data = JSON.stringify({ ok: true, opts })
       res.setHeader('Content-Length', data.length)
       res.write(data)
       res.end()
