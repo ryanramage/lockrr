@@ -508,7 +508,6 @@ async function startHttpServer (autopass) {
     }
     if (pathname === '/totp') {
       const secret = searchParams.get('secret')
-      console.log('got totp', secret, domain, profile)
       const value = { secret }
       await _autopass.add(`totp|${domain}`, JSON.stringify(value))
       const data = JSON.stringify({ ok: true })
