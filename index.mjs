@@ -13,6 +13,7 @@ import crypto from 'hypercore-crypto'
 import sodium from 'sodium-universal'
 import http from 'bare-http1'
 import { generateTOTP } from "@oslojs/otp";
+import { decodeBase32 } from "@oslojs/encoding";
 import { Writable } from 'streamx'
 import generate from './sgp/generate.mjs'
 import hostname from './sgp/hostname'
@@ -78,38 +79,13 @@ async function handleInviteMode (profile) {
   await toClipboard(inv)
   console.log('✅ invite copied to clipboard 📝\n')
 }
-function base32Decode(base32) {
-    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-    const padding = "=";
-    let bits = 0;
-    let value = 0;
-    const output = [];
-
-    for (const char of base32) {
-        if (char === padding) break;
-        const index = alphabet.indexOf(char.toUpperCase());
-        if (index === -1) {
-            throw new Error(`Invalid base32 character: ${char}`);
-        }
-
-        value = (value << 5) | index;
-        bits += 5;
-
-        if (bits >= 8) {
-            output.push((value >> (bits - 8)) & 0xff);
-            bits -= 8;
-        }
-    }
-
-    return new Uint8Array(output);
-}
 
 async function handleTOTPMode (lockrr) {
   const autopass = await getAutopass(lockrr.flags.profile)
   const domain = hostname(lockrr.args.url, {})
   const json = await autopass.get(`totp|${domain}`)
   const { secret } = JSON.parse(json)
-  const key = base32Decode(secret)
+  const key = decodeBase32(secret)
   const totp = generateTOTP(key, 30, 6);
   const timeLeftSeconds = Math.round(30 - (Date.now() / 1000 % 30))
   console.log('OTP:\t', totp)
