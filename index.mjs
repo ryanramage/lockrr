@@ -12,6 +12,7 @@ import baseEmoji from 'base-emoji'
 import crypto from 'hypercore-crypto'
 import sodium from 'sodium-universal'
 import http from 'bare-http1'
+import { generateTOTP } from "@oslojs/otp";
 import { Writable } from 'streamx'
 import generate from './sgp/generate.mjs'
 import hostname from './sgp/hostname'
@@ -30,6 +31,7 @@ const lockrr = command(
   flag('--token', 'regnerate the http token'),
   flag('--invite', 'lockrr sharing invite [invite mode]'),
   flag('--accept [invite]', 'accept a lockrr invite [accept mode]'),
+  flag('--totp', 'generate a totp secret for the domain'),
   flag('--store', 'put a key/value in the lockrr [store mode]'),
   flag('--search', 'search domain/urls with a start prfix'),
   flag('--options', 'set the supergenpassword options for a url [options mode]'),
@@ -51,6 +53,8 @@ const lockrr = command(
     }
     if (lockrr.flags.invite) {
       await handleInviteMode(lockrr.flags.profile)
+    } if (lockrr.flags.totp) {
+      await handleTOTPMode(lockrr)
     } else if (lockrr.flags.accept) {
       await handleAcceptMode(lockrr.flags.accept, lockrr.flags.profile)
     } else if (lockrr.flags.options) {
@@ -73,6 +77,49 @@ async function handleInviteMode (profile) {
   const inv = await autopass.createInvite()
   await toClipboard(inv)
   console.log('✅ invite copied to clipboard 📝\n')
+}
+function base32Decode(base32) {
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    const padding = "=";
+    let bits = 0;
+    let value = 0;
+    const output = [];
+
+    for (const char of base32) {
+        if (char === padding) break;
+        const index = alphabet.indexOf(char.toUpperCase());
+        if (index === -1) {
+            throw new Error(`Invalid base32 character: ${char}`);
+        }
+
+        value = (value << 5) | index;
+        bits += 5;
+
+        if (bits >= 8) {
+            output.push((value >> (bits - 8)) & 0xff);
+            bits -= 8;
+        }
+    }
+
+    return new Uint8Array(output);
+}
+
+async function handleTOTPMode (lockrr) {
+  const autopass = await getAutopass(lockrr.flags.profile)
+  const domain = hostname(lockrr.args.url, {})
+  const json = await autopass.get(`totp|${domain}`)
+  const { secret } = JSON.parse(json)
+  const key = base32Decode(secret)
+  const totp = generateTOTP(key, 30, 6);
+  const timeLeftSeconds = Math.round(30 - (Date.now() / 1000 % 30))
+  console.log('OTP:\t', totp)
+  console.log('time:\t', timeLeftSeconds)
+  await toClipboard(totp)
+
+  console.log('✅ otp copied to clipboard 📝\n')
+  await autopass.close()
+  process.exit(0)
+
 }
 
 async function handleAcceptMode (invite, profile) {
@@ -483,6 +530,32 @@ async function startHttpServer (autopass) {
       res.end()
       return
     }
+    if (pathname === '/totp') {
+      const secret = searchParams.get('secret')
+      console.log('got totp', secret, domain, profile)
+      const value = { secret }
+      await _autopass.add(`totp|${domain}`, JSON.stringify(value))
+      const data = JSON.stringify({ ok: true })
+      res.setHeader('Content-Length', data.length)
+      res.write(data)
+      res.end()
+      return
+    }
+
+    if (pathname === '/totp/generate') {
+      const json = _autopass.get(`totp|${domain}`)
+      const { secret } = JSON.parse(json)
+      const key = base32Decode(secret)
+      const totp = generateTOTP(key, 30, 6);
+      const timeLeftSeconds = Math.round(30 - (Date.now() / 1000 % 30))
+      const data = JSON.stringify({ ok: true, totp, timeLeftSeconds })
+      res.setHeader('Content-Length', data.length)
+      res.write(data)
+      res.end()
+      return
+    }
+
+
     const final = searchParams.get('pw')
     const entries = await getDomainEntries(_autopass, domain, final)
     res.statusCode = 200

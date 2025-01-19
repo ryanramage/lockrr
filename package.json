@@ -11,6 +11,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@oslojs/otp": "^1.1.0",
     "autopass": "^1.0.2",
     "bare-env": "^3.0.0",
     "bare-fs": "^4.0.1",
