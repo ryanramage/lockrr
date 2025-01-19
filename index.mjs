@@ -518,19 +518,30 @@ async function startHttpServer (autopass) {
     }
 
     if (pathname === '/totp/generate') {
-      const json = _autopass.get(`totp|${domain}`)
-      const { secret } = JSON.parse(json)
-      const key = base32Decode(secret)
-      const totp = generateTOTP(key, 30, 6);
-      const timeLeftSeconds = Math.round(30 - (Date.now() / 1000 % 30))
-      const data = JSON.stringify({ ok: true, totp, timeLeftSeconds })
-      res.setHeader('Content-Length', data.length)
-      res.write(data)
-      res.end()
-      return
+      try {
+        const json = await _autopass.get(`totp|${domain}`)
+        if (!json) {
+          res.writeHead(404)
+          res.end()
+          return
+        }
+        const { secret } = JSON.parse(json)
+        const key = decodeBase32(secret)
+        const totp = generateTOTP(key, 30, 6);
+        const timeLeftSeconds = Math.round(30 - (Date.now() / 1000 % 30))
+        const data = JSON.stringify({ ok: true, totp, timeLeftSeconds })
+        res.setHeader('Content-Length', data.length)
+        res.write(data)
+        res.end()
+        return
+      } catch (e) {
+        const data = { ok: false }
+        res.setHeader('Content-Length', data.length)
+        res.write(data)
+        res.end()
+        return
+      }
     }
-
-
     const final = searchParams.get('pw')
     const entries = await getDomainEntries(_autopass, domain, final)
     res.statusCode = 200
