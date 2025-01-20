@@ -32,7 +32,8 @@ const lockrr = command(
   flag('--token', 'regnerate the http token'),
   flag('--invite', 'lockrr sharing invite [invite mode]'),
   flag('--accept [invite]', 'accept a lockrr invite [accept mode]'),
-  flag('--totp', 'generate a totp secret for the domain'),
+  flag('--totpsecret', 'store the totpsecret, will prompt'),
+  flag('--totp', 'generate a totp code for the domain'),
   flag('--store', 'put a key/value in the lockrr [store mode]'),
   flag('--search', 'search domain/urls with a start prfix'),
   flag('--options', 'set the supergenpassword options for a url [options mode]'),
@@ -56,6 +57,8 @@ const lockrr = command(
       await handleInviteMode(lockrr.flags.profile)
     } if (lockrr.flags.totp) {
       await handleTOTPMode(lockrr)
+    } if (lockrr.flags.totpsecret) {
+      await handleTOTPSecretMode(lockrr)
     } else if (lockrr.flags.accept) {
       await handleAcceptMode(lockrr.flags.accept, lockrr.flags.profile)
     } else if (lockrr.flags.options) {
@@ -78,6 +81,17 @@ async function handleInviteMode (profile) {
   const inv = await autopass.createInvite()
   await toClipboard(inv)
   console.log('✅ invite copied to clipboard 📝\n')
+}
+async function handleTOTPSecretMode (lockrr) {
+  const autopass = await getAutopass(lockrr.flags.profile)
+  const domain = hostname(lockrr.args.url, {})
+  const secret = await getPassword('Enter TOTP Secret: ')
+  const json = JSON.stringify({ secret })
+  await autopass.add(`totp|${domain}`, json)
+  console.log('✅ totp secret stored')
+  await autopass.close()
+  process.exit(0)
+
 }
 
 async function handleTOTPMode (lockrr) {
