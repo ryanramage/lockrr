@@ -472,7 +472,7 @@ async function startHttpServer (autopass) {
       return
     }
     const { pathname, searchParams } = parseURL(req.url)
-    const domain = hostname(searchParams.get('domain'))
+    const domain = hostname(searchParams.get('domain'), {removeSubdomains: false})
     const profile = searchParams.get('profile')
     const _autopass = await getProfileAutopass(autopass, profile)
     if (pathname === '/options') {
