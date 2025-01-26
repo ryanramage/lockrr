@@ -487,6 +487,7 @@ async function startHttpServer (autopass) {
     if (pathname === '/options/set') {
       const currentOptions = await _autopass.get(`options|${domain}`) || '{}'
       const opts = JSON.parse(currentOptions)
+      if (searchParams.has('useCustomPassword')) opts.customPassword = Boolean(searchParams.get('useCustomPassword'))
       if (searchParams.has('length')) opts.length = Number(searchParams.get('length'))
       if (searchParams.has('secret')) {
         const secret = searchParams.get('secret')
