@@ -89,6 +89,7 @@ async function handleTOTPSecretMode (lockrr) {
   const json = JSON.stringify({ secret })
   await autopass.add(`totp|${domain}`, json)
   console.log('✅ totp secret stored')
+
   await autopass.close()
   process.exit(0)
 
@@ -114,7 +115,7 @@ async function handleTOTPMode (lockrr) {
 
 async function handleAcceptMode (invite, profile) {
   if (invite.length !== 106) {
-    console.log('⚠️ invalid invite')
+    console.log('⚠️ invalid invite!')
     process.exit(1)
   }
   const baseDir = getBaseDir(profile)
